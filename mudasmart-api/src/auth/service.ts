@@ -12,11 +12,12 @@ const output = async (user: User, refreshToken: string) => ({ user, accessToken:
 const issue = (userId: string, deviceId: number, refreshToken: string, familyId = id()) => repository.insertRefresh.run({ id: id(), userId, deviceId, tokenHash: hashToken(refreshToken), familyId, expiresAt: refreshExpiry(), now: now() });
 const deviceFor = (user: User, input: DeviceInput, ip: string) => {
   const current = repository.deviceByUser.all({ userId: user.id })[0];
-  if (user.role === 'murid' && current && current.deviceId !== input.deviceId) throw fail(403, 'Perangkat tidak diizinkan');
+  // deviceId NULL berarti belum/sudah di-reset — murid boleh bind ulang.
+  if (user.role === 'murid' && current && current.deviceId !== null && current.deviceId !== input.deviceId) throw fail(403, 'Perangkat tidak diizinkan');
   const existing = repository.deviceById.get({ deviceId: input.deviceId });
   if (existing && existing.userId !== user.id) throw fail(403, 'Perangkat tidak diizinkan');
   if (current && current.userAgent !== input.userAgent) repository.log(user.id, 'user_agent_mismatch', ip, { deviceId: input.deviceId });
-  if (current) { repository.touchDevice.run({ id: current.id, platform: input.platform ?? null, model: input.model ?? null, userAgent: input.userAgent, now: now() }); return current.id; }
+  if (current) { repository.touchDevice.run({ id: current.id, deviceId: input.deviceId, platform: input.platform ?? null, model: input.model ?? null, userAgent: input.userAgent, now: now() }); return current.id; }
   return repository.insertDevice.get({ userId: user.id, deviceId: input.deviceId, platform: input.platform ?? null, model: input.model ?? null, userAgent: input.userAgent, now: now() })!.id;
 };
 export const authService = {
@@ -27,7 +28,7 @@ export const authService = {
       if (!code) throw fail(400, 'Kode registrasi tidak valid');
       if (code.roleAllowed === 'murid' && !input.nis) throw fail(400, 'NIS wajib untuk murid');
       if (repository.userByEmail.get({ email: input.email })) throw fail(409, 'Email sudah digunakan');
-      const user: User = { id: id(), email: input.email, fullName: input.fullName, role: code.roleAllowed as Role, isActive: true };
+      const user: User = { id: id(), email: input.email, fullName: input.fullName, role: code.roleAllowed as Role, isActive: true, isAdmin: false };
       const time = now(); repository.insertUser.run({ ...user, passwordHash, now: time });
       if (user.role === 'murid') repository.insertStudent.run({ userId: user.id, nis: input.nis!, now: time }); else repository.insertTeacher.run({ userId: user.id, nip: input.nip ?? null, now: time });
       // Semua alur berjalan dalam transaksi sinkron single-proses; cek state sebelum update sudah menjamin keunikan.

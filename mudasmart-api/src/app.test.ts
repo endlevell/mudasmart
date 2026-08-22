@@ -1,12 +1,27 @@
 import { beforeEach, expect, test } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { app } from './app';
 import { db } from './db';
-import { auditLogs, devices, refreshTokens, registrationCodes, studentProfiles, teacherProfiles, users } from './db/schema';
+import { auditLogs, classes, devices, refreshTokens, registrationCodes, studentProfiles, teacherProfiles, users } from './db/schema';
+import { resetRateLimits } from './middleware/rate-limit';
 
 const request = (path: string, body: unknown, headers: Record<string, string> = {}) => app.request(path, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+const send = (method: string, path: string, body: unknown, headers: Record<string, string> = {}) => app.request(path, { method, headers: { 'content-type': 'application/json', ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
 const code = (code: string, roleAllowed: 'murid' | 'guru', maxUses = 2) => db.insert(registrationCodes).values({ code, roleAllowed, maxUses, usedCount: 0, isActive: true, createdAt: Date.now(), updatedAt: Date.now() }).run();
 
-beforeEach(() => { db.delete(auditLogs).run(); db.delete(refreshTokens).run(); db.delete(devices).run(); db.delete(studentProfiles).run(); db.delete(teacherProfiles).run(); db.delete(registrationCodes).run(); db.delete(users).run(); code('MURID', 'murid'); code('GURU', 'guru'); });
+const register = async (email: string, registrationCode: string, extra: Record<string, unknown> = {}) => {
+  const response = await request('/api/auth/register', { email, password: 'password123', fullName: email.split('@')[0], registrationCode, deviceId: crypto.randomUUID(), ...extra });
+  return (await response.json()) as { user: { id: string }; accessToken: string; refreshToken: string };
+};
+const bearer = (accessToken: string) => ({ authorization: `Bearer ${accessToken}` });
+const makeGuru = async (email = 'guru@example.com', admin = false) => {
+  const session = await register(email, 'GURU');
+  if (admin) db.update(teacherProfiles).set({ isAdmin: true }).where(eq(teacherProfiles.userId, session.user.id)).run();
+  return session;
+};
+const makeMurid = async (email = 'murid@example.com') => register(email, 'MURID', { nis: String(Math.floor(Math.random() * 100000)) });
+
+beforeEach(() => { resetRateLimits(); db.delete(auditLogs).run(); db.delete(refreshTokens).run(); db.delete(devices).run(); db.delete(studentProfiles).run(); db.delete(teacherProfiles).run(); db.delete(registrationCodes).run(); db.delete(classes).run(); db.delete(users).run(); code('MURID', 'murid'); code('GURU', 'guru'); });
 test('GET /api/health returns service status', async () => expect(await (await app.request('/api/health')).json()).toEqual({ status: 'ok' }));
 test('register derives murid role, requires NIS, supports multi-use code', async () => {
   const input = { email: 'murid@example.com', password: 'password123', fullName: 'Murid', registrationCode: 'MURID', deviceId: crypto.randomUUID(), nis: '123' };
@@ -39,3 +54,85 @@ test('inactive user loses access and refresh', async () => {
   expect((await request('/api/auth/refresh', { refreshToken: session.refreshToken, deviceId })).status).toBe(401);
 });
 test('logs redact token and password fields', async () => { const calls: string[] = []; const original = console.info; console.info = (value: string) => calls.push(value); try { const { logger } = await import('./lib/logger'); logger.info('event', { token: 'secret', password: 'secret' }); } finally { console.info = original; } expect(calls.join()).not.toContain('secret'); });
+
+// ===== Fase 2: kelas & murid =====
+test('role gates: murid blocked from students; guru non-admin blocked from class writes', async () => {
+  const murid = await makeMurid();
+  expect((await app.request('/api/students', { headers: bearer(murid.accessToken) })).status).toBe(403);
+  const guru = await makeGuru('guru1@example.com');
+  expect((await send('POST', '/api/classes', { name: 'X IPA 1', gradeLevel: 10, academicYear: '2026/2027' }, bearer(guru.accessToken))).status).toBe(403);
+  expect((await app.request('/api/classes', { headers: bearer(murid.accessToken) })).status).toBe(200);
+});
+
+test('admin creates and updates class; list includes student count', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const created = await send('POST', '/api/classes', { name: 'XI IPA 1', gradeLevel: 11, academicYear: '2026/2027' }, bearer(admin.accessToken));
+  expect(created.status).toBe(201);
+  const cls = (await created.json()) as { id: number };
+  const murid = await makeMurid();
+  await send('PATCH', `/api/students/${murid.user.id}`, { classId: cls.id }, bearer(admin.accessToken));
+  const list = await (await app.request('/api/classes', { headers: bearer(admin.accessToken) })).json() as { data: Array<{ id: number; studentCount: number }> };
+  expect(list.data.find((c) => c.id === cls.id)?.studentCount).toBe(1);
+  expect((await send('PATCH', `/api/classes/${cls.id}`, { name: 'XI IPA 2' }, bearer(admin.accessToken))).status).toBe(200);
+  expect((await send('POST', '/api/classes', { name: 'X', gradeLevel: 10, academicYear: 'bad' }, bearer(admin.accessToken))).status).toBe(400);
+});
+
+test('guru updates student name/class; invalid class rejected; NIS immutable via API', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const cls = await send('POST', '/api/classes', { name: 'X IPA 2', gradeLevel: 10, academicYear: '2026/2027' }, bearer(admin.accessToken));
+  const classId = ((await cls.json()) as { id: number }).id;
+  const murid = await makeMurid();
+  const guru = await makeGuru('guru2@example.com');
+  const updated = await send('PATCH', `/api/students/${murid.user.id}`, { fullName: 'Nama Baru', classId }, bearer(guru.accessToken));
+  expect(updated.status).toBe(200);
+  const detail = (await updated.json()) as { data: { fullName: string; className: string; nis: string } };
+  expect(detail.data.fullName).toBe('Nama Baru');
+  expect(detail.data.className).toBe('X IPA 2');
+  expect((await send('PATCH', `/api/students/${murid.user.id}`, { classId: 9999 }, bearer(guru.accessToken))).status).toBe(400);
+});
+
+test('deactivate is admin-only, revokes sessions, blocks login', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const guru = await makeGuru('guru3@example.com');
+  const murid = await makeMurid();
+  expect((await send('PATCH', `/api/students/${murid.user.id}/deactivate`, undefined, bearer(guru.accessToken))).status).toBe(403);
+  expect((await send('PATCH', `/api/students/${murid.user.id}/deactivate`, undefined, bearer(admin.accessToken))).status).toBe(204);
+  expect((await request('/api/auth/login', { email: 'murid@example.com', password: 'password123', deviceId: crypto.randomUUID() })).status).toBe(401);
+  expect((await request('/api/auth/refresh', { refreshToken: murid.refreshToken, deviceId: crypto.randomUUID() })).status).toBe(401);
+});
+
+test('device reset clears binding; new device binds, old refresh dies', async () => {
+  const guru = await makeGuru();
+  const deviceId = crypto.randomUUID();
+  const murid = await register('murid@example.com', 'MURID', { nis: '777', deviceId });
+  const info = await (await app.request(`/api/students/${murid.user.id}/device`, { headers: bearer(guru.accessToken) })).json() as { data: { deviceId: string } };
+  expect(info.data.deviceId).toBe(deviceId);
+  expect((await send('PATCH', `/api/students/${murid.user.id}/device/reset`, undefined, bearer(guru.accessToken))).status).toBe(204);
+  const newDeviceId = crypto.randomUUID();
+  const relogin = await request('/api/auth/login', { email: 'murid@example.com', password: 'password123', deviceId: newDeviceId });
+  expect(relogin.status).toBe(200);
+  expect((await request('/api/auth/refresh', { refreshToken: murid.refreshToken, deviceId })).status).toBe(401);
+  const after = await (await app.request(`/api/students/${murid.user.id}/device`, { headers: bearer(guru.accessToken) })).json() as { data: { deviceId: string; resetCount: number } };
+  expect(after.data.deviceId).toBe(newDeviceId);
+  expect(after.data.resetCount).toBe(1);
+});
+
+test('students list paginates, searches by name/nis, filters by class', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const cls = await send('POST', '/api/classes', { name: 'X IPS 1', gradeLevel: 10, academicYear: '2026/2027' }, bearer(admin.accessToken));
+  const classId = ((await cls.json()) as { id: number }).id;
+  const a = await register('a@example.com', 'MURID', { nis: '1001', fullName: 'Andi' });
+  const b = await register('b@example.com', 'MURID', { nis: '1002', fullName: 'Budi' });
+  await send('PATCH', `/api/students/${b.user.id}`, { classId }, bearer(admin.accessToken));
+  const byName = await (await app.request('/api/students?q=Andi', { headers: bearer(admin.accessToken) })).json() as { data: Array<{ id: string }>; total: number };
+  expect(byName.total).toBe(1);
+  expect(byName.data[0].id).toBe(a.user.id);
+  const byNis = await (await app.request('/api/students?q=1002', { headers: bearer(admin.accessToken) })).json() as { total: number };
+  expect(byNis.total).toBe(1);
+  const byClass = await (await app.request(`/api/students?classId=${classId}`, { headers: bearer(admin.accessToken) })).json() as { total: number };
+  expect(byClass.total).toBe(1);
+  const paged = await (await app.request('/api/students?page=2&pageSize=1', { headers: bearer(admin.accessToken) })).json() as { page: number; pageSize: number; total: number };
+  expect(paged.page).toBe(2);
+  expect(paged.pageSize).toBe(1);
+  expect(paged.total).toBe(2);
+});

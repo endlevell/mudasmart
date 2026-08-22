@@ -6,6 +6,7 @@ export interface User {
   fullName: string;
   role: Role;
   isActive: boolean;
+  isAdmin?: boolean | null;
 }
 
 export interface AuthResponse {

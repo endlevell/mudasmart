@@ -8,6 +8,19 @@ CREATE TABLE `audit_logs` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE TABLE `classes` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`name` text NOT NULL,
+	`gradeLevel` integer NOT NULL,
+	`academic_year` text NOT NULL,
+	`homeroom_teacher_id` text,
+	`is_active` integer DEFAULT true NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`homeroom_teacher_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE INDEX `classes_academic_year_idx` ON `classes` (`academic_year`,`is_active`);--> statement-breakpoint
 CREATE TABLE `devices` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`user_id` text NOT NULL,
@@ -15,6 +28,7 @@ CREATE TABLE `devices` (
 	`platform` text,
 	`model` text,
 	`user_agent` text NOT NULL,
+	`reset_count` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	`last_seen_at` integer NOT NULL,
@@ -51,9 +65,11 @@ CREATE TABLE `registration_codes` (
 CREATE TABLE `student_profiles` (
 	`user_id` text PRIMARY KEY NOT NULL,
 	`nis` text NOT NULL,
+	`class_id` integer,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`class_id`) REFERENCES `classes`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `student_profiles_nis_unique` ON `student_profiles` (`nis`);--> statement-breakpoint
