@@ -71,6 +71,7 @@ export default function GuruDashboard() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
 
+      <Button label="Rekap Absensi" onPress={() => router.push('/(guru)/rekap')} />
       <Button label="Kelola Murid" onPress={() => router.push('/(guru)/murid')} />
       <Button label="Kelola Kelas" onPress={() => router.push('/(guru)/kelas')} />
       {user?.isAdmin ? <Button label="Kelola Gerbang" onPress={() => router.push('/(guru)/gerbang')} /> : null}

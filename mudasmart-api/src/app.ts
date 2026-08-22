@@ -17,6 +17,9 @@ import { configService } from './config/service';
 import { patchConfigSchema } from './config/schema';
 import { attendanceService } from './attendance/service';
 import { historyQuerySchema, scanSchema } from './attendance/schema';
+import { reportsService } from './reports/service';
+import { dailyQuerySchema, exportQuerySchema, monthlyQuerySchema } from './reports/schema';
+import { buildDailyWorkbook, buildMonthlyWorkbook } from './reports/export';
 
 const ip = (context: { req: { header(name: string): string | undefined } }) => context.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 const userAgent = (context: { req: { header(name: string): string | undefined } }) => context.req.header('user-agent') ?? 'unknown';
@@ -77,3 +80,19 @@ app.post('/api/attendance/scan', auth, requireRole('murid'), async (context) => 
 });
 app.get('/api/attendance/me', auth, requireRole('murid'), async (context) => context.json(await attendanceService.history(context.get('auth').id, parse(context.req.query(), historyQuerySchema, 'Parameter tidak valid'))));
 app.get('/api/attendance/me/today', auth, requireRole('murid'), (context) => context.json({ data: attendanceService.todayRecord(context.get('auth').id) }));
+
+// ===== Reports (GURU) =====
+app.get('/api/reports/daily', auth, requireRole('guru'), (context) => context.json(reportsService.daily(parse(context.req.query(), dailyQuerySchema, 'Parameter tidak valid'))));
+app.get('/api/reports/monthly', auth, requireRole('guru'), (context) => context.json(reportsService.monthly(parse(context.req.query(), monthlyQuerySchema, 'Parameter tidak valid'))));
+app.get('/api/reports/export', auth, requireRole('guru'), async (context) => {
+  const query = parse(context.req.query(), exportQuerySchema, 'Parameter tidak valid');
+  const buffer = query.type === 'daily'
+    ? await buildDailyWorkbook(reportsService.daily({ date: query.date, classId: query.classId }))
+    : await buildMonthlyWorkbook(reportsService.monthly({ month: query.month, classId: query.classId }));
+  return new Response(new Uint8Array(buffer as ArrayBuffer), {
+    headers: {
+      'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'content-disposition': `attachment; filename="rekap-${query.type}.xlsx"`,
+    },
+  });
+});

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { repository as authRepository } from '../auth/repository';
 import { db } from '../db';
 import { attendanceSessions } from '../db/schema';
@@ -10,6 +10,15 @@ const now = () => Date.now();
 export const sessionsRepository = {
   byDate(date: string) {
     return db.select().from(attendanceSessions).where(eq(attendanceSessions.date, date)).get();
+  },
+  sessionDates(prefix: string) {
+    return db
+      .select({ date: attendanceSessions.date })
+      .from(attendanceSessions)
+      .orderBy(asc(attendanceSessions.date))
+      .all()
+      .filter((row) => row.date.startsWith(prefix))
+      .map((row) => row.date);
   },
   create(input: { date: string; openedBy: string; openedAt: number }, createdAt: number) {
     return db.insert(attendanceSessions).values({ ...input, status: 'open', createdAt }).returning({ id: attendanceSessions.id }).get();

@@ -3,6 +3,9 @@ import type { AuthResponse } from './types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+// Dipakai modul yang butuh URL penuh (mis. unduhan file dengan header auth).
+export const apiBaseUrl = () => BASE_URL;
+
 interface Tokens {
   accessToken?: string | null;
   refreshToken?: string | null;

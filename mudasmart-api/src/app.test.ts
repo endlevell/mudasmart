@@ -327,3 +327,49 @@ test('guru cannot use student attendance endpoints', async () => {
   expect((await app.request('/api/attendance/me', { headers: bearer(guru.accessToken) })).status).toBe(403);
   expect((await send('POST', '/api/attendance/scan', { qrCodeValue: 'x', clientNonce: crypto.randomUUID(), deviceId: crypto.randomUUID() }, bearer(guru.accessToken))).status).toBe(403);
 });
+
+// ===== Fase 5: rekap & export =====
+test('daily report computes hadir, tidak hadir, and no-session marker', async () => {
+  const { admin, murid, deviceId, qrCodeValue } = await makeScanEnv();
+  const second = await register('murid2@example.com', 'MURID', { nis: '559', deviceId: crypto.randomUUID() });
+  const cls = await (await app.request('/api/classes', { headers: bearer(admin.accessToken) })).json() as { data: Array<{ id: number }> };
+  await send('PATCH', `/api/students/${second.user.id}`, { classId: cls.data[0].id }, bearer(admin.accessToken));
+  await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId }, bearer(murid.accessToken));
+
+  const report = await (await app.request('/api/reports/daily', { headers: bearer(admin.accessToken) })).json() as {
+    sessionStatus: string;
+    classes: Array<{ students: Array<{ status: string | null }> }>;
+  };
+  expect(report.sessionStatus).toBe('open');
+  const statuses = report.classes.flatMap((c) => c.students.map((s) => s.status));
+  expect(statuses).toContain('hadir');
+  expect(statuses).toContain('tidak hadir');
+
+  const empty = await (await app.request('/api/reports/daily?date=2026-01-01', { headers: bearer(admin.accessToken) })).json() as { sessionStatus: null; classes: Array<{ students: Array<{ status: null }> }> };
+  expect(empty.sessionStatus).toBeNull();
+  expect(empty.classes[0]?.students[0]?.status).toBeNull();
+});
+
+test('monthly report aggregates per student', async () => {
+  const { admin, murid, deviceId, qrCodeValue } = await makeScanEnv();
+  const absent = await register('absent@example.com', 'MURID', { nis: '560', deviceId: crypto.randomUUID() });
+  const cls = await (await app.request('/api/classes', { headers: bearer(admin.accessToken) })).json() as { data: Array<{ id: number }> };
+  await send('PATCH', `/api/students/${absent.user.id}`, { classId: cls.data[0].id }, bearer(admin.accessToken));
+  await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId }, bearer(murid.accessToken));
+  const month = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit' }).format(new Date());
+  const report = await (await app.request(`/api/reports/monthly?month=${month}`, { headers: bearer(admin.accessToken) })).json() as { sessionCount: number; rows: Array<{ hadir: number; telat: number; tidakHadir: number }> };
+  expect(report.sessionCount).toBe(1);
+  expect(report.rows.find((r) => r.hadir === 1)).toBeTruthy();
+  expect(report.rows.some((r) => r.tidakHadir === 1)).toBeTruthy();
+});
+
+test('export returns xlsx for guru and rejects murid', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const daily = await app.request('/api/reports/export?type=daily', { headers: bearer(admin.accessToken) });
+  expect(daily.status).toBe(200);
+  expect(daily.headers.get('content-type')).toContain('spreadsheetml');
+  const monthly = await app.request('/api/reports/export?type=monthly', { headers: bearer(admin.accessToken) });
+  expect(monthly.status).toBe(200);
+  const murid = await makeMurid();
+  expect((await app.request('/api/reports/export?type=daily', { headers: bearer(murid.accessToken) })).status).toBe(403);
+});
