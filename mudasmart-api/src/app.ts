@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import './db/migrate';
 import { auth, requireAdmin, requireRole } from './middleware/auth';
-import { consumeLogin, consumeRefresh, failLogin, resetLogin } from './middleware/rate-limit';
+import { consumeLogin, consumeRefresh, consumeScan, failLogin, resetLogin } from './middleware/rate-limit';
 import { authService } from './auth/service';
 import { loginSchema, logoutSchema, refreshSchema, registerSchema } from './auth/schema';
 import { studentsService } from './students/service';
@@ -15,6 +15,8 @@ import { gatesService } from './gates/service';
 import { createGateSchema, gateIdParamSchema, patchGateSchema } from './gates/schema';
 import { configService } from './config/service';
 import { patchConfigSchema } from './config/schema';
+import { attendanceService } from './attendance/service';
+import { historyQuerySchema, scanSchema } from './attendance/schema';
 
 const ip = (context: { req: { header(name: string): string | undefined } }) => context.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 const userAgent = (context: { req: { header(name: string): string | undefined } }) => context.req.header('user-agent') ?? 'unknown';
@@ -66,3 +68,12 @@ app.patch('/api/gates/:id', auth, requireAdmin, async (context) => context.json(
 // ===== Attendance config =====
 app.get('/api/config/attendance', auth, (context) => context.json({ data: configService.get() }));
 app.patch('/api/config/attendance', auth, requireAdmin, async (context) => context.json({ data: await configService.update(context.get('auth').id, ip(context), await body(context.req.raw, patchConfigSchema)) }));
+
+// ===== Attendance (MURID) =====
+app.post('/api/attendance/scan', auth, requireRole('murid'), async (context) => {
+  if (!(await consumeScan(ip(context)))) return context.json({ error: 'Terlalu banyak percobaan' }, 429);
+  const result = attendanceService.scan(context.get('auth'), await body(context.req.raw, scanSchema), ip(context), userAgent(context));
+  return context.json(result.body, result.created ? 201 : 200);
+});
+app.get('/api/attendance/me', auth, requireRole('murid'), async (context) => context.json(await attendanceService.history(context.get('auth').id, parse(context.req.query(), historyQuerySchema, 'Parameter tidak valid'))));
+app.get('/api/attendance/me/today', auth, requireRole('murid'), (context) => context.json({ data: attendanceService.todayRecord(context.get('auth').id) }));

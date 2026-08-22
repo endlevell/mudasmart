@@ -8,6 +8,30 @@ CREATE TABLE `attendance_config` (
 	FOREIGN KEY (`updated_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE TABLE `attendance_records` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`session_id` integer NOT NULL,
+	`student_id` text NOT NULL,
+	`class_id_snapshot` integer NOT NULL,
+	`gate_id` integer NOT NULL,
+	`device_id` integer NOT NULL,
+	`scanned_at` integer NOT NULL,
+	`status` text NOT NULL,
+	`latitude` real,
+	`longitude` real,
+	`geofence_passed` integer,
+	`client_nonce` text NOT NULL,
+	FOREIGN KEY (`session_id`) REFERENCES `attendance_sessions`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`student_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`class_id_snapshot`) REFERENCES `classes`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`gate_id`) REFERENCES `gates`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`device_id`) REFERENCES `devices`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `attendance_records_client_nonce_unique` ON `attendance_records` (`client_nonce`);--> statement-breakpoint
+CREATE UNIQUE INDEX `attendance_session_student_unique` ON `attendance_records` (`session_id`,`student_id`);--> statement-breakpoint
+CREATE INDEX `attendance_student_scanned_idx` ON `attendance_records` (`student_id`,`scanned_at`);--> statement-breakpoint
+CREATE INDEX `attendance_class_snapshot_idx` ON `attendance_records` (`class_id_snapshot`,`scanned_at`);--> statement-breakpoint
 CREATE TABLE `attendance_sessions` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`date` text NOT NULL,

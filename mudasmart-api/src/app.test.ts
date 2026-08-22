@@ -2,7 +2,7 @@ import { beforeEach, expect, test } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { app } from './app';
 import { db } from './db';
-import { auditLogs, attendanceConfig, attendanceSessions, classes, devices, gates, refreshTokens, registrationCodes, studentProfiles, teacherProfiles, users } from './db/schema';
+import { auditLogs, attendanceConfig, attendanceRecords, attendanceSessions, classes, devices, gates, refreshTokens, registrationCodes, studentProfiles, teacherProfiles, users } from './db/schema';
 import { resetRateLimits } from './middleware/rate-limit';
 
 const request = (path: string, body: unknown, headers: Record<string, string> = {}) => app.request(path, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
@@ -21,7 +21,7 @@ const makeGuru = async (email = 'guru@example.com', admin = false) => {
 };
 const makeMurid = async (email = 'murid@example.com') => register(email, 'MURID', { nis: String(Math.floor(Math.random() * 100000)) });
 
-beforeEach(() => { resetRateLimits(); db.delete(auditLogs).run(); db.delete(refreshTokens).run(); db.delete(devices).run(); db.delete(studentProfiles).run(); db.delete(teacherProfiles).run(); db.delete(attendanceSessions).run(); db.delete(gates).run(); db.delete(attendanceConfig).run(); db.delete(classes).run(); db.delete(registrationCodes).run(); db.delete(users).run(); code('MURID', 'murid'); code('GURU', 'guru'); });
+beforeEach(() => { resetRateLimits(); db.delete(auditLogs).run(); db.delete(refreshTokens).run(); db.delete(attendanceRecords).run(); db.delete(devices).run(); db.delete(studentProfiles).run(); db.delete(teacherProfiles).run(); db.delete(attendanceSessions).run(); db.delete(gates).run(); db.delete(attendanceConfig).run(); db.delete(classes).run(); db.delete(registrationCodes).run(); db.delete(users).run(); code('MURID', 'murid'); code('GURU', 'guru'); });
 test('GET /api/health returns service status', async () => expect(await (await app.request('/api/health')).json()).toEqual({ status: 'ok' }));
 test('register derives murid role, requires NIS, supports multi-use code', async () => {
   const input = { email: 'murid@example.com', password: 'password123', fullName: 'Murid', registrationCode: 'MURID', deviceId: crypto.randomUUID(), nis: '123' };
@@ -187,4 +187,143 @@ test('attendance config defaults then updates with ordering validation', async (
   const updated = await send('PATCH', '/api/config/attendance', { checkInStart: '06:00', onTimeCutoff: '07:15', checkInEnd: '08:00' }, bearer(admin.accessToken));
   expect(updated.status).toBe(200);
   expect((((await updated.json()) as { data: { onTimeCutoff: string } }).data).onTimeCutoff).toBe('07:15');
+});
+
+// ===== Fase 4: scan absensi =====
+const fmtMinutes = (value: number) => `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+const wibNowMinutes = () => {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date()).map((x) => [x.type, x.value])) as Record<'hour' | 'minute', string>;
+  return Number(p.hour === '24' ? 0 : p.hour) * 60 + Number(p.minute);
+};
+
+const makeScanEnv = async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const cls = await send('POST', '/api/classes', { name: 'XI IPA 1', gradeLevel: 11, academicYear: '2026/2027' }, bearer(admin.accessToken));
+  const classId = ((await cls.json()) as { id: number }).id;
+  const deviceId = crypto.randomUUID();
+  const murid = await register('murid@example.com', 'MURID', { nis: '555', deviceId });
+  await send('PATCH', `/api/students/${murid.user.id}`, { classId }, bearer(admin.accessToken));
+  await send('PATCH', '/api/config/attendance', { checkInStart: '00:00', onTimeCutoff: '23:59', checkInEnd: '23:59' }, bearer(admin.accessToken));
+  await send('POST', '/api/sessions/open', undefined, bearer(admin.accessToken));
+  const gate = await send('POST', '/api/gates', { name: 'Gerbang Utama' }, bearer(admin.accessToken));
+  const gateData = ((await gate.json()) as { data: { qrCodeValue: string } }).data;
+  return { admin, murid, deviceId, qrCodeValue: gateData.qrCodeValue };
+};
+
+test('scan records attendance; today and history reflect it', async () => {
+  const { murid, deviceId, qrCodeValue } = await makeScanEnv();
+  const nonce = crypto.randomUUID();
+  const scan = await request('/api/attendance/scan', { qrCodeValue, clientNonce: nonce, deviceId }, bearer(murid.accessToken));
+  expect(scan.status).toBe(201);
+  const body = (await scan.json()) as { status: string; scannedAt: number };
+  expect(body.status).toBe('hadir');
+  const today = await (await app.request('/api/attendance/me/today', { headers: bearer(murid.accessToken) })).json() as { data: { status: string } | null };
+  expect(today.data?.status).toBe('hadir');
+  const month = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit' }).format(new Date());
+  const history = await (await app.request(`/api/attendance/me?month=${month}`, { headers: bearer(murid.accessToken) })).json() as { data: unknown[]; total: number; sessionDates: string[] };
+  expect(history.total).toBe(1);
+  expect(history.sessionDates.length).toBe(1);
+});
+
+test('replay same nonce returns identical result; different nonce is friendly duplicate', async () => {
+  const { murid, deviceId, qrCodeValue } = await makeScanEnv();
+  const nonce = crypto.randomUUID();
+  const first = await request('/api/attendance/scan', { qrCodeValue, clientNonce: nonce, deviceId }, bearer(murid.accessToken));
+  const firstBody = (await first.json()) as { scannedAt: number };
+  const retry = await request('/api/attendance/scan', { qrCodeValue, clientNonce: nonce, deviceId }, bearer(murid.accessToken));
+  expect(retry.status).toBe(200);
+  expect(((await retry.json()) as { scannedAt: number }).scannedAt).toBe(firstBody.scannedAt);
+  const dup = await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId }, bearer(murid.accessToken));
+  expect(dup.status).toBe(409);
+  expect(((await dup.json()) as { error: string }).error).toContain('sudah tercatat');
+});
+
+test('device mismatch rejected and audited', async () => {
+  const { murid, deviceId, qrCodeValue } = await makeScanEnv();
+  const otherDevice = crypto.randomUUID();
+  const scan = await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId: otherDevice }, bearer(murid.accessToken));
+  expect(scan.status).toBe(403);
+  const audits = db.select().from(auditLogs).all() as Array<{ action: string }>;
+  expect(audits.some((a) => a.action === 'device_mismatch')).toBe(true);
+  void deviceId;
+});
+
+test('invalid or inactive gate rejected', async () => {
+  const { murid, deviceId, qrCodeValue } = await makeScanEnv();
+  expect((await request('/api/attendance/scan', { qrCodeValue: 'gate-hantu', clientNonce: crypto.randomUUID(), deviceId }, bearer(murid.accessToken))).status).toBe(400);
+  const admin = await makeGuru('admin2@example.com', true);
+  const gatesList = await (await app.request('/api/gates', { headers: bearer(admin.accessToken) })).json() as { data: Array<{ id: number }> };
+  await send('PATCH', `/api/gates/${gatesList.data[0].id}`, { isActive: false }, bearer(admin.accessToken));
+  expect((await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId }, bearer(murid.accessToken))).status).toBe(400);
+});
+
+test('closed session blocks scan', async () => {
+  const { admin, murid, deviceId, qrCodeValue } = await makeScanEnv();
+  await send('POST', '/api/sessions/close', undefined, bearer(admin.accessToken));
+  const scan = await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId }, bearer(murid.accessToken));
+  expect(scan.status).toBe(409);
+  expect(((await scan.json()) as { error: string }).error).toContain('ditutup');
+});
+
+test('geofence enforced only when radius set; missing GPS asked explicitly', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const cls = await send('POST', '/api/classes', { name: 'X', gradeLevel: 10, academicYear: '2026/2027' }, bearer(admin.accessToken));
+  const classId = ((await cls.json()) as { id: number }).id;
+  const deviceId = crypto.randomUUID();
+  const murid = await register('murid@example.com', 'MURID', { nis: '556', deviceId });
+  await send('PATCH', `/api/students/${murid.user.id}`, { classId }, bearer(admin.accessToken));
+  await send('POST', '/api/sessions/open', undefined, bearer(admin.accessToken));
+  await send('PATCH', '/api/config/attendance', { checkInStart: '00:00', onTimeCutoff: '23:59', checkInEnd: '23:59' }, bearer(admin.accessToken));
+  const gate = await send('POST', '/api/gates', { name: 'Gerang Geofence', latitude: -6.2, longitude: 106.6, radiusMeters: 50 }, bearer(admin.accessToken));
+  const qrCodeValue = ((await gate.json()) as { data: { qrCodeValue: string } }).data.qrCodeValue;
+  expect((await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId }, bearer(murid.accessToken))).status).toBe(400);
+  const far = await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId, latitude: -7.3, longitude: 107.9 }, bearer(murid.accessToken));
+  expect(far.status).toBe(403);
+  expect(((await far.json()) as { error: string }).error).toContain('luar area sekolah');
+  const near = await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId, latitude: -6.2001, longitude: 106.6001 }, bearer(murid.accessToken));
+  expect(near.status).toBe(201);
+});
+
+test('murid without class blocked from scanning', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  await send('POST', '/api/sessions/open', undefined, bearer(admin.accessToken));
+  const gate = await send('POST', '/api/gates', { name: 'G' }, bearer(admin.accessToken));
+  const qrCodeValue = ((await gate.json()) as { data: { qrCodeValue: string } }).data.qrCodeValue;
+  const murid = await makeMurid();
+  const scan = await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId: crypto.randomUUID() }, bearer(murid.accessToken));
+  expect([400, 403]).toContain(scan.status);
+  void murid;
+});
+
+test('time windows: before start, after end, late cutoff', async () => {
+  const minute = wibNowMinutes();
+  if (minute === 0 || minute >= 1439) return; // hindari wrap menit — kasus tepat tengah malam
+  const admin = await makeGuru('admin@example.com', true);
+  const cls = await send('POST', '/api/classes', { name: 'X', gradeLevel: 10, academicYear: '2026/2027' }, bearer(admin.accessToken));
+  const classId = ((await cls.json()) as { id: number }).id;
+  const deviceId = crypto.randomUUID();
+  const murid = await register('murid@example.com', 'MURID', { nis: '557', deviceId });
+  await send('PATCH', `/api/students/${murid.user.id}`, { classId }, bearer(admin.accessToken));
+  await send('POST', '/api/sessions/open', undefined, bearer(admin.accessToken));
+  const gate = await send('POST', '/api/gates', { name: 'G' }, bearer(admin.accessToken));
+  const qrCodeValue = ((await gate.json()) as { data: { qrCodeValue: string } }).data.qrCodeValue;
+
+  await send('PATCH', '/api/config/attendance', { checkInStart: fmtMinutes(minute + 1), onTimeCutoff: '23:59', checkInEnd: '23:59' }, bearer(admin.accessToken));
+  expect((await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId }, bearer(murid.accessToken))).status).toBe(403);
+
+  await send('PATCH', '/api/config/attendance', { checkInStart: '00:00', onTimeCutoff: fmtMinutes(minute - 1), checkInEnd: fmtMinutes(minute) }, bearer(admin.accessToken));
+  const late = await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId }, bearer(murid.accessToken));
+  expect(late.status).toBe(201);
+  expect(((await late.json()) as { status: string }).status).toBe('telat');
+
+  const murid2 = await register('murid2@example.com', 'MURID', { nis: '558', deviceId: crypto.randomUUID() });
+  await send('PATCH', `/api/students/${murid2.user.id}`, { classId }, bearer(admin.accessToken));
+  await send('PATCH', '/api/config/attendance', { checkInStart: '00:00', onTimeCutoff: '00:00', checkInEnd: fmtMinutes(Math.max(minute - 1, 0)) }, bearer(admin.accessToken));
+  expect((await request('/api/attendance/scan', { qrCodeValue, clientNonce: crypto.randomUUID(), deviceId: crypto.randomUUID() }, bearer(murid2.accessToken))).status).toBe(403);
+});
+
+test('guru cannot use student attendance endpoints', async () => {
+  const guru = await makeGuru();
+  expect((await app.request('/api/attendance/me', { headers: bearer(guru.accessToken) })).status).toBe(403);
+  expect((await send('POST', '/api/attendance/scan', { qrCodeValue: 'x', clientNonce: crypto.randomUUID(), deviceId: crypto.randomUUID() }, bearer(guru.accessToken))).status).toBe(403);
 });
