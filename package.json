@@ -1,0 +1,11 @@
+{
+  "name": "mudasmart",
+  "private": true,
+  "workspaces": ["mudasmart-api", "mudasmart-app"],
+  "scripts": {
+    "dev:api": "bun run --cwd mudasmart-api dev",
+    "dev:app": "bun run --cwd mudasmart-app start",
+    "check": "bun run --cwd mudasmart-api check",
+    "test": "bun run --cwd mudasmart-api test"
+  }
+}
