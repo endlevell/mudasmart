@@ -4,6 +4,7 @@ const makeLimiters = () => ({
   login: new RateLimiterMemory({ points: 5, duration: 60 }),
   refresh: new RateLimiterMemory({ points: 10, duration: 60 }),
   scan: new RateLimiterMemory({ points: 10, duration: 60 }),
+  register: new RateLimiterMemory({ points: 5, duration: 60 }),
 });
 let limiters = makeLimiters();
 const failures = new Map<string, { count: number; until: number }>();
@@ -28,6 +29,14 @@ export const consumeRefresh = async (ip: string) => {
 export const consumeScan = async (ip: string) => {
   try {
     await limiters.scan.consume(ip);
+    return true;
+  } catch {
+    return false;
+  }
+};
+export const consumeRegister = async (ip: string) => {
+  try {
+    await limiters.register.consume(ip);
     return true;
   } catch {
     return false;

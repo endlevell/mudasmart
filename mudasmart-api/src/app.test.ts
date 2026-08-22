@@ -373,3 +373,22 @@ test('export returns xlsx for guru and rejects murid', async () => {
   const murid = await makeMurid();
   expect((await app.request('/api/reports/export?type=daily', { headers: bearer(murid.accessToken) })).status).toBe(403);
 });
+
+// ===== Fase 6: hardening =====
+test('register rate limited per IP', async () => {
+  const inputs = Array.from({ length: 6 }, (_, index) => ({ email: `r${index}@example.com`, password: 'password123', fullName: 'R', registrationCode: 'MURID', deviceId: crypto.randomUUID(), nis: String(index) }));
+  const statuses: number[] = [];
+  for (const input of inputs) statuses.push((await request('/api/auth/register', input)).status);
+  expect(statuses.filter((status) => status === 429).length).toBeGreaterThan(0);
+});
+
+test('unknown query and body fields rejected everywhere', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  expect((await app.request('/api/students?hacker=1', { headers: bearer(admin.accessToken) })).status).toBe(400);
+  expect((await send('POST', '/api/classes', { name: 'X', gradeLevel: 10, academicYear: '2026/2027', role: 'guru' }, bearer(admin.accessToken))).status).toBe(400);
+});
+
+test('security headers present on responses', async () => {
+  const response = await app.request('/api/health');
+  expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+});

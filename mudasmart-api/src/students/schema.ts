@@ -5,7 +5,7 @@ export const listStudentsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   q: z.string().trim().min(1).max(64).optional(),
   classId: z.coerce.number().int().positive().optional(),
-});
+}).strict();
 
 // NIS immutable; isActive hanya lewat endpoint deactivate admin.
 export const patchStudentSchema = z.object({

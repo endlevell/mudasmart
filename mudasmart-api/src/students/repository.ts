@@ -21,7 +21,11 @@ export const studentsRepository = {
   // Filter dinamis lewat builder Drizzle — nilai selalu bound parameter, tanpa string SQL mentah.
   async list(filters: { q?: string; classId?: number; limit: number; offset: number }) {
     const conditions = [eq(users.isActive, true), eq(users.role, 'murid')];
-    if (filters.q) conditions.push(or(like(users.fullName, `%${filters.q}%`), like(studentProfiles.nis, `%${filters.q}%`))!);
+    if (filters.q) {
+      // Buang wildcard LIKE agar input user tidak bisa menyusun pola pencarian liar.
+      const term = filters.q.replace(/[%_]/g, '');
+      conditions.push(or(like(users.fullName, `%${term}%`), like(studentProfiles.nis, `%${term}%`))!);
+    }
     if (filters.classId) conditions.push(eq(studentProfiles.classId, filters.classId));
     const where = and(...conditions);
     const data = await baseQuery().where(where).orderBy(asc(users.fullName)).limit(filters.limit).offset(filters.offset);
