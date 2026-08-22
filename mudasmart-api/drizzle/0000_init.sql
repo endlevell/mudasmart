@@ -1,3 +1,28 @@
+CREATE TABLE `attendance_config` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`check_in_start` text NOT NULL,
+	`on_time_cutoff` text NOT NULL,
+	`check_in_end` text NOT NULL,
+	`updated_by` text,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`updated_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `attendance_sessions` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`date` text NOT NULL,
+	`opened_by` text NOT NULL,
+	`opened_at` integer NOT NULL,
+	`closed_by` text,
+	`closed_at` integer,
+	`status` text NOT NULL,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`opened_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`closed_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "attendance_sessions_status_check" CHECK("attendance_sessions"."status" in ('open', 'closed'))
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `attendance_sessions_date_unique` ON `attendance_sessions` (`date`);--> statement-breakpoint
 CREATE TABLE `audit_logs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text,
@@ -36,6 +61,19 @@ CREATE TABLE `devices` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `devices_device_id_unique` ON `devices` (`device_id`);--> statement-breakpoint
+CREATE TABLE `gates` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`name` text NOT NULL,
+	`qr_code_value` text NOT NULL,
+	`latitude` real,
+	`longitude` real,
+	`radius_meters` integer,
+	`is_active` integer DEFAULT true NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `gates_qr_code_value_unique` ON `gates` (`qr_code_value`);--> statement-breakpoint
 CREATE TABLE `refresh_tokens` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,

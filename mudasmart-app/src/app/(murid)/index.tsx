@@ -1,19 +1,40 @@
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../components/ui/button';
+import { Button } from '@/components/ui/button';
 import { colors, radius, spacing } from '@/constants/theme';
+import { sessionsApi } from '@/api/sessions.api';
 import { useAuthStore } from '@/store/auth-store';
 
-// Placeholder Fase 1 — dashboard murid (status sesi + scan) dibangun di Fase 4.
+// Dashboard murid — status sesi hari ini. Scan absen dibangun di Fase 4.
 export default function MuridDashboard() {
-  const { session, logout } = useAuthStore();
-  const user = session?.user;
+  const { session: auth, logout } = useAuthStore();
+  const user = auth?.user;
+  const [sessionStatus, setSessionStatus] = useState<string>('Memuat...');
+  const [configInfo] = useState<string>('');
+
+  const loadSession = useCallback(async () => {
+    try {
+      const result = (await sessionsApi.today()).data;
+      setSessionStatus(result?.status === 'open' ? 'Sesi absen: Dibuka' : result ? 'Sesi absen: Ditutup' : 'Sesi absen: Belum dibuka');
+    } catch {
+      setSessionStatus('Gagal memuat status sesi');
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadSession();
+  }, [loadSession]);
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.greeting}>Halo, {user?.fullName}</Text>
-        <Text style={styles.meta}>{user?.email}</Text>
+        <Text style={styles.meta}>NIS {user?.email}</Text>
         <Text style={styles.badge}>Murid</Text>
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.session}>{sessionStatus}</Text>
+        {configInfo ? <Text style={styles.meta}>{configInfo}</Text> : null}
       </View>
       <Button label="Keluar" onPress={() => void logout()} variant="danger-outline" />
     </View>
@@ -37,6 +58,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   greeting: { color: colors.textPrimary, fontSize: 20, fontWeight: '700' },
+  session: { color: colors.textPrimary, fontSize: 16, fontWeight: '600' },
   meta: { color: colors.textSecondary, fontSize: 14 },
   badge: {
     alignSelf: 'flex-start',

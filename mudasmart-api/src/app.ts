@@ -9,6 +9,12 @@ import { studentsService } from './students/service';
 import { idParamSchema, listStudentsQuerySchema, patchStudentSchema } from './students/schema';
 import { classesService } from './classes/service';
 import { classIdParamSchema, createClassSchema, patchClassSchema } from './classes/schema';
+import { sessionsService } from './sessions/service';
+import { dateParamSchema } from './sessions/schema';
+import { gatesService } from './gates/service';
+import { createGateSchema, gateIdParamSchema, patchGateSchema } from './gates/schema';
+import { configService } from './config/service';
+import { patchConfigSchema } from './config/schema';
 
 const ip = (context: { req: { header(name: string): string | undefined } }) => context.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 const userAgent = (context: { req: { header(name: string): string | undefined } }) => context.req.header('user-agent') ?? 'unknown';
@@ -45,3 +51,18 @@ app.get('/api/classes', auth, (context) => context.json({ data: classesService.l
 app.get('/api/classes/:id', auth, requireRole('guru'), (context) => context.json(classesService.detail(parse(context.req.param('id'), classIdParamSchema, 'Parameter tidak valid'))));
 app.post('/api/classes', auth, requireAdmin, async (context) => context.json(await classesService.create(context.get('auth').id, ip(context), await body(context.req.raw, createClassSchema)), 201));
 app.patch('/api/classes/:id', auth, requireAdmin, async (context) => context.json(await classesService.update(context.get('auth').id, ip(context), parse(context.req.param('id'), classIdParamSchema, 'Parameter tidak valid'), await body(context.req.raw, patchClassSchema))));
+
+// ===== Sessions =====
+app.post('/api/sessions/open', auth, requireRole('guru'), (context) => context.json(sessionsService.open(context.get('auth').id, ip(context))));
+app.post('/api/sessions/close', auth, requireRole('guru'), (context) => context.json(sessionsService.close(context.get('auth').id, ip(context))));
+app.get('/api/sessions/today', auth, (context) => context.json({ data: sessionsService.today() }));
+app.get('/api/sessions/:date', auth, requireRole('guru'), (context) => context.json({ data: sessionsService.byDate(parse(context.req.param('date'), dateParamSchema, 'Parameter tidak valid')) }));
+
+// ===== Gates (baca GURU; tulis admin) =====
+app.get('/api/gates', auth, requireRole('guru'), (context) => context.json({ data: gatesService.list() }));
+app.post('/api/gates', auth, requireAdmin, async (context) => context.json({ data: await gatesService.create(context.get('auth').id, ip(context), await body(context.req.raw, createGateSchema)) }, 201));
+app.patch('/api/gates/:id', auth, requireAdmin, async (context) => context.json({ data: await gatesService.update(context.get('auth').id, ip(context), parse(context.req.param('id'), gateIdParamSchema, 'Parameter tidak valid'), await body(context.req.raw, patchGateSchema)) }));
+
+// ===== Attendance config =====
+app.get('/api/config/attendance', auth, (context) => context.json({ data: configService.get() }));
+app.patch('/api/config/attendance', auth, requireAdmin, async (context) => context.json({ data: await configService.update(context.get('auth').id, ip(context), await body(context.req.raw, patchConfigSchema)) }));

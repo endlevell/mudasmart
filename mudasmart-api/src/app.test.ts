@@ -2,7 +2,7 @@ import { beforeEach, expect, test } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { app } from './app';
 import { db } from './db';
-import { auditLogs, classes, devices, refreshTokens, registrationCodes, studentProfiles, teacherProfiles, users } from './db/schema';
+import { auditLogs, attendanceConfig, attendanceSessions, classes, devices, gates, refreshTokens, registrationCodes, studentProfiles, teacherProfiles, users } from './db/schema';
 import { resetRateLimits } from './middleware/rate-limit';
 
 const request = (path: string, body: unknown, headers: Record<string, string> = {}) => app.request(path, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
@@ -21,7 +21,7 @@ const makeGuru = async (email = 'guru@example.com', admin = false) => {
 };
 const makeMurid = async (email = 'murid@example.com') => register(email, 'MURID', { nis: String(Math.floor(Math.random() * 100000)) });
 
-beforeEach(() => { resetRateLimits(); db.delete(auditLogs).run(); db.delete(refreshTokens).run(); db.delete(devices).run(); db.delete(studentProfiles).run(); db.delete(teacherProfiles).run(); db.delete(registrationCodes).run(); db.delete(classes).run(); db.delete(users).run(); code('MURID', 'murid'); code('GURU', 'guru'); });
+beforeEach(() => { resetRateLimits(); db.delete(auditLogs).run(); db.delete(refreshTokens).run(); db.delete(devices).run(); db.delete(studentProfiles).run(); db.delete(teacherProfiles).run(); db.delete(attendanceSessions).run(); db.delete(gates).run(); db.delete(attendanceConfig).run(); db.delete(classes).run(); db.delete(registrationCodes).run(); db.delete(users).run(); code('MURID', 'murid'); code('GURU', 'guru'); });
 test('GET /api/health returns service status', async () => expect(await (await app.request('/api/health')).json()).toEqual({ status: 'ok' }));
 test('register derives murid role, requires NIS, supports multi-use code', async () => {
   const input = { email: 'murid@example.com', password: 'password123', fullName: 'Murid', registrationCode: 'MURID', deviceId: crypto.randomUUID(), nis: '123' };
@@ -135,4 +135,56 @@ test('students list paginates, searches by name/nis, filters by class', async ()
   expect(paged.page).toBe(2);
   expect(paged.pageSize).toBe(1);
   expect(paged.total).toBe(2);
+});
+
+// ===== Fase 3: sesi, gerbang, config =====
+test('session open/close/reopen idempotent single row per day', async () => {
+  const guru = await makeGuru('piket@example.com');
+  const opened = await send('POST', '/api/sessions/open', undefined, bearer(guru.accessToken));
+  expect(opened.status).toBe(200);
+  const first = (await opened.json()) as { id: number; status: string };
+  expect(first.status).toBe('open');
+  const again = await send('POST', '/api/sessions/open', undefined, bearer(guru.accessToken));
+  expect(((await again.json()) as { id: number }).id).toBe(first.id);
+  const closed = await send('POST', '/api/sessions/close', undefined, bearer(guru.accessToken));
+  expect(((await closed.json()) as { id: number; status: string }).status).toBe('closed');
+  const reopened = await send('POST', '/api/sessions/open', undefined, bearer(guru.accessToken));
+  const reopenedBody = (await reopened.json()) as { id: number; status: string };
+  expect(reopenedBody.id).toBe(first.id);
+  expect(reopenedBody.status).toBe('open');
+});
+
+test('murid reads today session but cannot open; bad date rejected', async () => {
+  const murid = await makeMurid();
+  const today = await app.request('/api/sessions/today', { headers: bearer(murid.accessToken) });
+  expect(today.status).toBe(200);
+  expect((await today.json()).data).toBeNull();
+  expect((await send('POST', '/api/sessions/open', undefined, bearer(murid.accessToken))).status).toBe(403);
+  const guru = await makeGuru();
+  expect((await app.request('/api/sessions/2026-13-99', { headers: bearer(guru.accessToken) })).status).toBe(400);
+});
+
+test('gates: admin creates with qr, regenerates value, guru read-only', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const created = await send('POST', '/api/gates', { name: 'Gerbang Utama' }, bearer(admin.accessToken));
+  expect(created.status).toBe(201);
+  const gate = (await created.json()).data as { id: number; qrCodeValue: string };
+  expect(gate.qrCodeValue).toMatch(/^gate-/);
+  const guru = await makeGuru('gurubaca@example.com');
+  expect((await app.request('/api/gates', { headers: bearer(guru.accessToken) })).status).toBe(200);
+  expect((await send('POST', '/api/gates', { name: 'X' }, bearer(guru.accessToken))).status).toBe(403);
+  const regenerated = await send('PATCH', `/api/gates/${gate.id}`, { regenerateQr: true }, bearer(admin.accessToken));
+  const newGate = (await regenerated.json()).data as { qrCodeValue: string };
+  expect(newGate.qrCodeValue).not.toBe(gate.qrCodeValue);
+  expect((await send('PATCH', `/api/gates/${gate.id}`, { radiusMeters: 50 }, bearer(admin.accessToken))).status).toBe(200);
+});
+
+test('attendance config defaults then updates with ordering validation', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const initial = await (await app.request('/api/config/attendance', { headers: bearer(admin.accessToken) })).json() as { data: { checkInStart: string; onTimeCutoff: string; checkInEnd: string } };
+  expect(initial.data.checkInStart).toBe('06:00');
+  expect((await send('PATCH', '/api/config/attendance', { checkInStart: '07:00', onTimeCutoff: '06:30', checkInEnd: '08:00' }, bearer(admin.accessToken))).status).toBe(400);
+  const updated = await send('PATCH', '/api/config/attendance', { checkInStart: '06:00', onTimeCutoff: '07:15', checkInEnd: '08:00' }, bearer(admin.accessToken));
+  expect(updated.status).toBe(200);
+  expect((((await updated.json()) as { data: { onTimeCutoff: string } }).data).onTimeCutoff).toBe('07:15');
 });
