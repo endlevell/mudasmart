@@ -1,0 +1,82 @@
+CREATE TABLE `audit_logs` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text,
+	`action` text NOT NULL,
+	`metadata` text,
+	`ip` text,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `devices` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`user_id` text NOT NULL,
+	`device_id` text,
+	`platform` text,
+	`model` text,
+	`user_agent` text NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`last_seen_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `devices_device_id_unique` ON `devices` (`device_id`);--> statement-breakpoint
+CREATE TABLE `refresh_tokens` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`token_hash` text NOT NULL,
+	`family_id` text NOT NULL,
+	`device_id` integer NOT NULL,
+	`expires_at` integer NOT NULL,
+	`revoked_at` integer,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`device_id`) REFERENCES `devices`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `refresh_tokens_token_hash_unique` ON `refresh_tokens` (`token_hash`);--> statement-breakpoint
+CREATE TABLE `registration_codes` (
+	`code` text PRIMARY KEY NOT NULL,
+	`role_allowed` text NOT NULL,
+	`is_active` integer DEFAULT true NOT NULL,
+	`max_uses` integer,
+	`used_count` integer DEFAULT 0 NOT NULL,
+	`expires_at` integer,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	CONSTRAINT "registration_codes_role_allowed_check" CHECK("registration_codes"."role_allowed" in ('murid', 'guru'))
+);
+--> statement-breakpoint
+CREATE TABLE `student_profiles` (
+	`user_id` text PRIMARY KEY NOT NULL,
+	`nis` text NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `student_profiles_nis_unique` ON `student_profiles` (`nis`);--> statement-breakpoint
+CREATE TABLE `teacher_profiles` (
+	`user_id` text PRIMARY KEY NOT NULL,
+	`nip` text,
+	`is_admin` integer DEFAULT false NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `teacher_profiles_nip_unique` ON `teacher_profiles` (`nip`);--> statement-breakpoint
+CREATE TABLE `users` (
+	`id` text PRIMARY KEY NOT NULL,
+	`email` text NOT NULL,
+	`password_hash` text NOT NULL,
+	`full_name` text NOT NULL,
+	`role` text NOT NULL,
+	`is_active` integer DEFAULT true NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	CONSTRAINT "users_role_check" CHECK("users"."role" in ('murid', 'guru'))
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);
