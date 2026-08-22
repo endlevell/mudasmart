@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Card } from '../../../components/ui/card';
+import { EmptyState } from '../../../components/ui/empty-state';
 import { Select } from '../../../components/ui/select';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, radius, spacing, type } from '../../../constants/theme';
 import { classesApi, type ClassRoom } from '../../../api/classes.api';
 import { studentsApi, type Student } from '../../../api/students.api';
 
@@ -56,17 +58,17 @@ export default function KelolaMuridScreen() {
         keyExtractor={(item) => item.id}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         renderItem={({ item }) => (
-          <Pressable onPress={() => router.push({ pathname: '/(guru)/murid/[id]', params: { id: item.id } })} style={styles.row}>
-            <View>
-              <Text style={styles.name}>{item.fullName}</Text>
-              <Text style={styles.meta}>
-                NIS {item.nis}
-                {item.className ? ` — ${item.className}` : ''}
-              </Text>
-            </View>
-          </Pressable>
+          <Card>
+            <Pressable onPress={() => router.push({ pathname: '/(guru)/murid/[id]', params: { id: item.id } })} style={styles.row}>
+              <View>
+                <Text style={styles.name}>{item.fullName}</Text>
+                <Text style={styles.meta}>NIS {item.nis}{item.className ? ` · ${item.className}` : ''}</Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
+          </Card>
         )}
-        ListEmptyComponent={!error ? <Text style={styles.empty}>Tidak ada murid</Text> : null}
+        ListEmptyComponent={!error ? <EmptyState title="Tidak ada murid" message="Coba ubah kata kunci atau filter kelas." /> : null}
       />
     </View>
   );
@@ -80,21 +82,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: type.body.fontSize,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
-  error: { color: colors.danger, fontSize: 13, marginBottom: spacing.sm },
+  error: { color: colors.danger, fontSize: type.caption.fontSize, marginBottom: spacing.sm },
   separator: { height: spacing.sm },
-  row: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    padding: spacing.md,
-  },
-  name: { color: colors.textPrimary, fontSize: 16, fontWeight: '600' },
-  meta: { color: colors.textSecondary, fontSize: 13 },
-  empty: { color: colors.textSecondary, marginTop: spacing.xl, textAlign: 'center' },
+  row: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  name: { ...type.bodyStrong, color: colors.textPrimary },
+  meta: { ...type.caption, color: colors.textSecondary },
+  chevron: { color: colors.primary500, fontSize: 26, fontWeight: '700' },
 });

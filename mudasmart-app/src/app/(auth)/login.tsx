@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { colors, radius, spacing } from '@/constants/theme';
-import { useAuthStore } from '@/store/auth-store';
-import { fieldErrors, loginSchema } from '@/utils/validation';
+import { colors, radius, shadow, spacing, type } from '../../constants/theme';
+import { useAuthStore } from '../../store/auth-store';
+import { fieldErrors, loginSchema } from '../../utils/validation';
 
 export default function LoginScreen() {
   const { login, pending, error } = useAuthStore();
@@ -29,8 +29,13 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>MUDASmart</Text>
-        <Text style={styles.subtitle}>SMA Muhammadiyah 2 Tangerang</Text>
+        <View style={styles.brandRow}>
+          <View style={styles.brandMark}>
+            <Text style={styles.brandMarkText}>M</Text>
+          </View>
+          <Text style={styles.title}>MUDASmart</Text>
+        </View>
+        <Text style={styles.subtitle}>Absensi SMA Muhammadiyah 2 Tangerang</Text>
 
         <Input
           autoCapitalize="none"
@@ -58,7 +63,7 @@ export default function LoginScreen() {
         <Button disabled={!form.email || !form.password} label="Masuk" onPress={submit} pending={pending} />
 
         <Link href="/(auth)/register" style={styles.link}>
-          Belum punya akun? Daftar
+          Belum punya akun? <Text style={styles.linkStrong}>Daftar</Text>
         </Link>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -71,18 +76,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundAlt,
     flexGrow: 1,
     justifyContent: 'center',
-    padding: spacing.lg,
+    padding: spacing.xl,
   },
-  title: { color: colors.primary700, fontSize: 32, fontWeight: '700', textAlign: 'center' },
-  subtitle: { color: colors.textSecondary, fontSize: 14, marginBottom: spacing.xl, textAlign: 'center' },
-  errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: colors.danger,
+  brandRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, justifyContent: 'center' },
+  brandMark: {
+    alignItems: 'center',
+    backgroundColor: colors.primary700,
     borderRadius: radius.md,
-    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+    ...shadow.card,
+  },
+  brandMarkText: { color: colors.textInverse, fontSize: 22, fontWeight: '800' },
+  title: { ...type.display, color: colors.primary900 },
+  subtitle: { ...type.body, color: colors.textSecondary, marginBottom: spacing.xl, marginTop: spacing.sm, textAlign: 'center' },
+  errorBox: {
+    backgroundColor: colors.dangerBg,
+    borderRadius: radius.md,
     marginBottom: spacing.md,
     padding: spacing.md,
   },
-  errorText: { color: colors.danger, fontSize: 14 },
-  link: { color: colors.info, marginTop: spacing.lg, textAlign: 'center' },
+  errorText: { color: colors.danger, fontSize: type.caption.fontSize + 1, fontWeight: '600' },
+  link: { alignSelf: 'center', color: colors.textSecondary, marginTop: spacing.lg },
+  linkStrong: { color: colors.primary700, fontWeight: '700' },
 });

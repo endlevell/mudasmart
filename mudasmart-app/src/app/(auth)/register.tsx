@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { colors, radius, spacing } from '@/constants/theme';
-import { useAuthStore } from '@/store/auth-store';
-import { fieldErrors, registerSchema } from '@/utils/validation';
+import { colors, radius, spacing, type } from '../../constants/theme';
+import { useAuthStore } from '../../store/auth-store';
+import { fieldErrors, registerSchema } from '../../utils/validation';
 
 const initial = { fullName: '', email: '', password: '', confirmPassword: '', registrationCode: '', nis: '' };
 
@@ -35,8 +35,8 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Daftar Akun</Text>
-        <Text style={styles.subtitle}>Gunakan kode sekolah dari admin</Text>
+        <Text style={styles.title}>Buat Akun</Text>
+        <Text style={styles.subtitle}>Gunakan kode sekolah yang diberikan admin</Text>
 
         <Input label="Nama Lengkap" onChangeText={update('fullName')} value={form.fullName} error={errors.fullName} />
         <Input
@@ -48,7 +48,7 @@ export default function RegisterScreen() {
           value={form.email}
           error={errors.email}
         />
-        <Input label="Kata Sandi" onChangeText={update('password')} secureTextEntry value={form.password} error={errors.password} />
+        <Input label="Kata Sandi" onChangeText={update('password')} secureTextEntry value={form.password} error={errors.password} hint="Minimal 8 karakter" />
         <Input
           label="Konfirmasi Kata Sandi"
           onChangeText={update('confirmPassword')}
@@ -65,10 +65,15 @@ export default function RegisterScreen() {
           </View>
         ) : null}
 
-        <Button disabled={!form.email || !form.password || !form.fullName || !form.registrationCode} label="Daftar" onPress={submit} pending={pending} />
+        <Button
+          disabled={!form.email || !form.password || !form.fullName || !form.registrationCode}
+          label="Daftar"
+          onPress={submit}
+          pending={pending}
+        />
 
         <Link href="/(auth)/login" style={styles.link}>
-          Sudah punya akun? Masuk
+          Sudah punya akun? <Text style={styles.linkStrong}>Masuk</Text>
         </Link>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -81,18 +86,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundAlt,
     flexGrow: 1,
     justifyContent: 'center',
-    padding: spacing.lg,
+    padding: spacing.xl,
   },
-  title: { color: colors.primary700, fontSize: 28, fontWeight: '700', textAlign: 'center' },
-  subtitle: { color: colors.textSecondary, fontSize: 14, marginBottom: spacing.lg, textAlign: 'center' },
+  title: { ...type.display, color: colors.primary900 },
+  subtitle: { ...type.body, color: colors.textSecondary, marginBottom: spacing.lg, marginTop: spacing.sm },
   errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: colors.danger,
+    backgroundColor: colors.dangerBg,
     borderRadius: radius.md,
-    borderWidth: 1,
     marginBottom: spacing.md,
     padding: spacing.md,
   },
-  errorText: { color: colors.danger, fontSize: 14 },
-  link: { color: colors.info, marginTop: spacing.lg, textAlign: 'center' },
+  errorText: { color: colors.danger, fontSize: type.caption.fontSize + 1, fontWeight: '600' },
+  link: { alignSelf: 'center', color: colors.textSecondary, marginTop: spacing.lg },
+  linkStrong: { color: colors.primary700, fontWeight: '700' },
 });

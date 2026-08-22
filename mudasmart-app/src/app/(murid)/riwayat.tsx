@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Badge } from '../../components/ui/badge';
+import { EmptyState } from '../../components/ui/empty-state';
 import { Select } from '../../components/ui/select';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, radius, spacing, type } from '../../constants/theme';
 import { attendanceApi, type HistoryItem } from '../../api/attendance.api';
 
 const monthLabel = (month: string) =>
@@ -59,24 +61,30 @@ export default function RiwayatScreen() {
         renderItem={({ item }) =>
           item.kind === 'record' ? (
             <View style={styles.row}>
-              <View>
-                <Text style={styles.date}>{dayLabel(item.item.scannedAt)}</Text>
-                <Text style={styles.meta}>{timeLabel(item.item.scannedAt)} WIB — {item.item.gateName}</Text>
+              <View style={styles.dateCol}>
+                <Text style={styles.day}>{dayLabel(item.item.scannedAt).split(',')[0]}</Text>
+                <Text style={styles.dateNum}>{dayLabel(item.item.scannedAt).split(', ')[1]}</Text>
               </View>
-              <View style={[styles.badge, item.item.status === 'hadir' ? styles.hadir : styles.telat]}>
-                <Text style={[styles.badgeText, { color: item.item.status === 'hadir' ? colors.primary700 : colors.warning }]}>
-                  {item.item.status === 'hadir' ? 'Hadir' : 'Telat'}
-                </Text>
+              <View style={styles.mid}>
+                <Text style={styles.time}>{timeLabel(item.item.scannedAt)} WIB</Text>
+                <Text style={styles.meta}>{item.item.gateName}</Text>
               </View>
+              <Badge label={item.item.status === 'hadir' ? 'Hadir' : 'Telat'} tone={item.item.status === 'hadir' ? 'success' : 'warning'} />
             </View>
           ) : (
             <View style={[styles.row, styles.absentRow]}>
-              <Text style={styles.meta}>{dayLabel(new Date(`${item.date}T00:00:00+07:00`).getTime())}</Text>
-              <Text style={styles.absentText}>Tidak Hadir</Text>
+              <View style={styles.dateCol}>
+                <Text style={[styles.day, styles.muted]}>{dayLabel(new Date(`${item.date}T00:00:00+07:00`).getTime()).split(',')[0]}</Text>
+                <Text style={[styles.dateNum, styles.muted]}>{dayLabel(new Date(`${item.date}T00:00:00+07:00`).getTime()).split(', ')[1]}</Text>
+              </View>
+              <View style={styles.mid}>
+                <Text style={styles.meta}>Tanpa catatan kehadiran</Text>
+              </View>
+              <Badge label="Tidak Hadir" tone="danger" />
             </View>
           )
         }
-        ListEmptyComponent={!error ? <Text style={styles.empty}>Belum ada data bulan ini</Text> : null}
+        ListEmptyComponent={!error ? <EmptyState title="Belum ada data" message="Riwayat absensi bulan ini masih kosong." /> : null}
       />
     </View>
   );
@@ -84,25 +92,29 @@ export default function RiwayatScreen() {
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.backgroundAlt, flex: 1, padding: spacing.md },
-  error: { color: colors.danger, fontSize: 13, marginBottom: spacing.sm },
+  error: { color: colors.danger, fontSize: type.caption.fontSize, marginBottom: spacing.sm },
   separator: { height: spacing.sm },
   row: {
     alignItems: 'center',
     backgroundColor: colors.background,
-    borderColor: colors.border,
     borderRadius: radius.md,
-    borderWidth: 1,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.md,
     padding: spacing.md,
+    ...{
+      shadowColor: '#0B3D2C',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 10,
+      elevation: 2,
+    },
   },
-  absentRow: { opacity: 0.75 },
-  date: { color: colors.textPrimary, fontSize: 15, fontWeight: '600' },
-  meta: { color: colors.textSecondary, fontSize: 13 },
-  badge: { borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-  hadir: { backgroundColor: colors.primary100 },
-  telat: { backgroundColor: '#FEF3C7' },
-  badgeText: { fontSize: 12, fontWeight: '700' },
-  absentText: { color: colors.danger, fontSize: 12, fontWeight: '700' },
-  empty: { color: colors.textSecondary, marginTop: spacing.xl, textAlign: 'center' },
+  absentRow: { opacity: 0.8 },
+  dateCol: { alignItems: 'center', minWidth: 64 },
+  day: { ...type.label, color: colors.primary700, textTransform: 'uppercase' },
+  dateNum: { ...type.caption, color: colors.textPrimary },
+  muted: { color: colors.textSecondary },
+  mid: { flex: 1 },
+  time: { ...type.bodyStrong, color: colors.textPrimary },
+  meta: { ...type.caption, color: colors.textSecondary },
 });

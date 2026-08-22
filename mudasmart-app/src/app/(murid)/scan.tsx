@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Button } from '../../components/ui/button';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, radius, shadow, spacing, type } from '../../constants/theme';
 import { attendanceApi, type ScanResult } from '../../api/attendance.api';
 
 type ScanState = 'idle' | 'processing' | 'success' | 'error';
@@ -54,7 +54,7 @@ export default function ScanScreen() {
   if (!permission.granted) {
     return (
       <View style={[styles.center, styles.dark]}>
-        <Text style={styles.permissionText}>Izinkan akses kamera untuk memindai QR absensi.</Text>
+        <Text style={styles.hint}>Izinkan akses kamera untuk memindai QR absensi.</Text>
         <Button label="Beri Izin Kamera" onPress={() => void requestPermission()} />
       </View>
     );
@@ -112,19 +112,28 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', backgroundColor: colors.backgroundAlt, flex: 1, justifyContent: 'center', padding: spacing.lg },
-  permissionText: { color: '#FFFFFF', fontSize: 15, marginBottom: spacing.md, textAlign: 'center' },
-  dark: { backgroundColor: '#111827' },
+  dark: { backgroundColor: colors.dark },
   camera: { flex: 1 },
-  overlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)', flex: 1, justifyContent: 'center' },
-  viewfinder: { borderColor: colors.primary300, borderRadius: radius.lg, borderWidth: 3, height: 240, width: 240 },
-  hint: { color: '#FFFFFF', fontSize: 15, marginTop: spacing.lg, textAlign: 'center' },
-  processing: { alignItems: 'center', marginTop: spacing.md },
-  modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.5)', flex: 1, justifyContent: 'center', padding: spacing.lg },
-  modalCard: { backgroundColor: colors.background, borderRadius: radius.lg, gap: spacing.sm, padding: spacing.xl },
+  overlay: { alignItems: 'center', backgroundColor: 'rgba(7,18,14,0.55)', flex: 1, justifyContent: 'center' },
+  viewfinder: {
+    borderColor: colors.primary300,
+    borderRadius: radius.xl,
+    borderWidth: 2,
+    height: 250,
+    shadowColor: colors.primary500,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 18,
+    width: 250,
+  },
+  hint: { ...type.body, color: '#FFFFFF', marginTop: spacing.lg, textAlign: 'center' },
+  processing: { alignItems: 'center', backgroundColor: 'rgba(11,110,79,0.85)', borderRadius: radius.full, flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  modalBackdrop: { backgroundColor: 'rgba(7,18,14,0.6)', flex: 1, justifyContent: 'center', padding: spacing.lg },
+  modalCard: { backgroundColor: colors.background, borderRadius: radius.xl, gap: spacing.sm, padding: spacing.xl, ...shadow.floating },
   successBorder: { borderTopWidth: 4, borderTopColor: colors.primary700 },
   errorBorder: { borderTopWidth: 4, borderTopColor: colors.danger },
-  resultTitle: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
-  resultMessage: { color: colors.textPrimary, fontSize: 15, textAlign: 'center' },
-  resultTime: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
-  statusLabel: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  resultTitle: { ...type.title, textAlign: 'center' },
+  resultMessage: { ...type.body, color: colors.textPrimary, textAlign: 'center' },
+  resultTime: { ...type.caption, color: colors.textSecondary, textAlign: 'center' },
+  statusLabel: { ...type.bodyStrong, textAlign: 'center' },
 });

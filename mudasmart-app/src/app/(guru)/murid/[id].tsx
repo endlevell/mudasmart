@@ -1,10 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
+import { Card } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, spacing, type } from '../../../constants/theme';
 import { classesApi, type ClassRoom } from '../../../api/classes.api';
 import { studentsApi, type DeviceInfo, type Student } from '../../../api/students.api';
 import { useAuthStore } from '../../../store/auth-store';
@@ -112,14 +114,21 @@ export default function DetailMuridScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.name}>{student.fullName}</Text>
-        <Text style={styles.meta}>NIS {student.nis}</Text>
-        <Text style={styles.meta}>{student.email}</Text>
-        <Text style={styles.meta}>{student.className ?? 'Belum punya kelas'}</Text>
-      </View>
+      <Card style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{student.fullName.slice(0, 1).toUpperCase()}</Text>
+        </View>
+        <View style={styles.profileInfo}>
+          <Text style={styles.name}>{student.fullName}</Text>
+          <Text style={styles.meta}>NIS {student.nis}</Text>
+          <Text style={styles.meta}>{student.email}</Text>
+          <View style={{ marginTop: spacing.xs }}>
+            <Badge label={student.className ?? 'Belum punya kelas'} tone={student.className ? 'success' : 'warning'} />
+          </View>
+        </View>
+      </Card>
 
-      <View style={styles.card}>
+      <Card>
         <Text style={styles.sectionTitle}>Perangkat</Text>
         {device ? (
           <>
@@ -131,9 +140,9 @@ export default function DetailMuridScreen() {
         ) : (
           <Text style={styles.meta}>Belum ada perangkat terdaftar</Text>
         )}
-      </View>
+      </Card>
 
-      <View style={styles.card}>
+      <Card>
         <Text style={styles.sectionTitle}>Edit Data</Text>
         <Input label="Nama Lengkap" onChangeText={setFullName} value={fullName} />
         <Select
@@ -144,27 +153,28 @@ export default function DetailMuridScreen() {
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button label="Simpan Perubahan" onPress={save} pending={pending} />
-      </View>
+      </Card>
 
-      {isAdmin ? (
-        <Button label="Nonaktifkan Murid" onPress={confirmDeactivate} variant="danger-outline" />
-      ) : null}
+      {isAdmin ? <Button label="Nonaktifkan Murid" onPress={confirmDeactivate} variant="danger-outline" /> : null}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.backgroundAlt, gap: spacing.md, padding: spacing.md },
-  card: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.md,
+  profileCard: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  avatar: {
+    alignItems: 'center',
+    backgroundColor: colors.primary700,
+    borderRadius: 999,
+    height: 56,
+    justifyContent: 'center',
+    width: 56,
   },
-  name: { color: colors.textPrimary, fontSize: 20, fontWeight: '700' },
-  sectionTitle: { color: colors.primary700, fontSize: 15, fontWeight: '600' },
-  meta: { color: colors.textSecondary, fontSize: 14 },
-  error: { color: colors.danger, fontSize: 13 },
+  avatarText: { color: colors.textInverse, fontSize: 24, fontWeight: '800' },
+  profileInfo: { flex: 1, gap: 2 },
+  name: { ...type.heading, color: colors.primary900 },
+  sectionTitle: { ...type.label, color: colors.textSecondary, marginBottom: spacing.xs, textTransform: 'uppercase' },
+  meta: { ...type.caption, color: colors.textSecondary },
+  error: { color: colors.danger, fontSize: type.caption.fontSize },
 });

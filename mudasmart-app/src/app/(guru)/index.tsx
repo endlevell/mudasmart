@@ -1,12 +1,14 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/ui/button';
-import { colors, radius, spacing } from '@/constants/theme';
-import { sessionsApi, type AttendanceSession } from '@/api/sessions.api';
-import { useAuthStore } from '@/store/auth-store';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
+import { colors, spacing, type } from '../../constants/theme';
+import { sessionsApi, type AttendanceSession } from '../../api/sessions.api';
+import { useAuthStore } from '../../store/auth-store';
 
-// Dashboard guru Fase 3 — kontrol sesi. Rekap & kelola murid via tautan.
+// Dashboard guru — kontrol sesi + pintasan modul.
 export default function GuruDashboard() {
   const { session: auth, logout } = useAuthStore();
   const user = auth?.user;
@@ -15,7 +17,7 @@ export default function GuruDashboard() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const loadSession = useCallback(async () => {
     try {
       setSession((await sessionsApi.today()).data);
       setError(null);
@@ -27,8 +29,8 @@ export default function GuruDashboard() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadSession();
+  }, [loadSession]);
 
   const toggle = async () => {
     setPending(true);
@@ -44,59 +46,80 @@ export default function GuruDashboard() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.greeting}>Halo, {user?.fullName}</Text>
-        <Text style={styles.meta}>{user?.isAdmin ? 'Guru Admin' : 'Guru'}</Text>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>Halo,</Text>
+          <Text style={styles.name}>{user?.fullName}</Text>
+        </View>
+        <Badge label={user?.isAdmin ? 'Guru Admin' : 'Guru'} tone="info" />
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Sesi Absensi Hari Ini</Text>
+      <Card style={styles.sessionCard}>
+        <Text style={styles.sectionLabel}>Sesi Absensi Hari Ini</Text>
         {loading ? (
-          <ActivityIndicator color={colors.primary700} />
-        ) : session?.status === 'open' ? (
-          <>
-            <View style={[styles.statusBadge, styles.open]}>
-              <Text style={styles.statusOpen}>Dibuka</Text>
-            </View>
-            <Button label="Tutup Sesi" onPress={() => void toggle()} pending={pending} variant="danger-outline" />
-          </>
+          <Text style={styles.sessionState}>Memuat...</Text>
         ) : (
           <>
-            <View style={[styles.statusBadge, styles.closedBadge]}>
-              <Text style={styles.statusClosed}>{session ? 'Ditutup' : 'Belum dibuka'}</Text>
-            </View>
-            <Button label="Buka Sesi" onPress={() => void toggle()} pending={pending} />
+            <Text style={[styles.sessionState, session?.status !== 'open' && styles.sessionClosed]}>
+              {session?.status === 'open' ? 'Sedang Dibuka' : session ? 'Ditutup' : 'Belum dibuka'}
+            </Text>
+            <Button
+              label={session?.status === 'open' ? 'Tutup Sesi' : 'Buka Sesi'}
+              onPress={() => void toggle()}
+              pending={pending}
+              variant={session?.status === 'open' ? 'danger-outline' : 'primary'}
+            />
           </>
         )}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-      </View>
+      </Card>
 
-      <Button label="Rekap Absensi" onPress={() => router.push('/(guru)/rekap')} />
-      <Button label="Kelola Murid" onPress={() => router.push('/(guru)/murid')} />
-      <Button label="Kelola Kelas" onPress={() => router.push('/(guru)/kelas')} />
-      {user?.isAdmin ? <Button label="Kelola Gerbang" onPress={() => router.push('/(guru)/gerbang')} /> : null}
-      <Button label="Keluar" onPress={() => void logout()} variant="danger-outline" />
+      <Card>
+        <PressableRow label="Rekap Absensi" sub="Harian, bulanan, export Excel" onPress={() => router.push('/(guru)/rekap')} />
+        <Divider />
+        <PressableRow label="Kelola Murid" sub="Data murid & reset perangkat" onPress={() => router.push('/(guru)/murid')} />
+        <Divider />
+        <PressableRow label="Kelola Kelas" sub="Daftar kelas & wali kelas" onPress={() => router.push('/(guru)/kelas')} />
+        {user?.isAdmin ? (
+          <>
+            <Divider />
+            <PressableRow label="Kelola Gerbang" sub="QR gerbang & geofence" onPress={() => router.push('/(guru)/gerbang')} />
+          </>
+        ) : null}
+      </Card>
+
+      <Button label="Keluar" onPress={() => void logout()} variant="ghost" />
     </View>
   );
 }
 
+function PressableRow({ label, sub, onPress }: { label: string; sub: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.rowPress}>
+      <View>
+        <Text style={styles.rowLabel}>{label}</Text>
+        <Text style={styles.rowSub}>{sub}</Text>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </Pressable>
+  );
+}
+
+const Divider = () => <View style={styles.divider} />;
+
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.backgroundAlt, flex: 1, gap: spacing.md, padding: spacing.lg },
-  card: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.lg,
-  },
-  greeting: { color: colors.textPrimary, fontSize: 20, fontWeight: '700' },
-  meta: { color: colors.textSecondary, fontSize: 14 },
-  sectionTitle: { color: colors.primary700, fontSize: 15, fontWeight: '600' },
-  statusBadge: { alignSelf: 'flex-start', borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-  open: { backgroundColor: colors.primary100 },
-  closedBadge: { backgroundColor: '#F3F4F6' },
-  statusOpen: { color: colors.primary700, fontWeight: '600' },
-  statusClosed: { color: colors.textSecondary, fontWeight: '600' },
-  error: { color: colors.danger, fontSize: 13 },
+  header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
+  greeting: { ...type.body, color: colors.textSecondary },
+  name: { ...type.title, color: colors.primary900 },
+  sessionCard: { gap: spacing.sm },
+  sectionLabel: { ...type.label, color: colors.textSecondary, textTransform: 'uppercase' },
+  sessionState: { ...type.title, color: colors.primary700 },
+  sessionClosed: { color: colors.textSecondary },
+  error: { color: colors.danger, fontSize: type.caption.fontSize },
+  rowPress: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm },
+  rowLabel: { ...type.bodyStrong, color: colors.textPrimary },
+  rowSub: { ...type.caption, color: colors.textSecondary },
+  divider: { backgroundColor: colors.border, height: 1 },
+  chevron: { color: colors.primary500, fontSize: 26, fontWeight: '700' },
 });
