@@ -9,14 +9,14 @@ export interface DailyReport {
   classes: {
     classId: number | null;
     className: string;
-    students: { id: string; nis: string; fullName: string; status: 'hadir' | 'telat' | 'tidak hadir' | null; scannedAt: number | null; recordId: number | null }[];
+    students: { id: string; nis: string; fullName: string; status: 'hadir' | 'telat' | 'izin' | 'tidak hadir' | null; scannedAt: number | null; recordId: number | null }[];
   }[];
 }
 
 export interface MonthlyReport {
   month: string;
   sessionCount: number;
-  rows: { studentId: string; nis: string; fullName: string; className: string; hadir: number; telat: number; tidakHadir: number }[];
+  rows: { studentId: string; nis: string; fullName: string; className: string; hadir: number; telat: number; izin: number; tidakHadir: number }[];
 }
 
 const query = (params: { date?: string; month?: string; classId?: number }) => {

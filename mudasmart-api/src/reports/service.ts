@@ -11,6 +11,8 @@ export const reportsService = {
     const session = reportsRepository.sessionByDate(date);
     const records = session ? reportsRepository.recordsForSession(session.id) : [];
     const byStudent = new Map(records.map((record) => [record.studentId, record]));
+    // Izin disetujui pada tanggal tsb — berlaku hanya bila murid tidak scan.
+    const onLeave = new Set(reportsRepository.approvedLeavesOn(date).map((leave) => leave.studentId));
 
     const grouped = new Map<number | null, { classId: number | null; className: string; students: Array<Record<string, unknown>> }>();
     for (const student of reportsRepository.activeStudents(query.classId) as StudentRow[]) {
@@ -21,8 +23,9 @@ export const reportsService = {
         id: student.id,
         nis: student.nis,
         fullName: student.fullName,
-        // Hari tanpa sesi: null (bukan alfa); hari bersesi tanpa record: Tidak Hadir.
-        status: record ? record.status : session ? 'tidak hadir' : null,
+        // Hari tanpa sesi: null (bukan alfa); hari bersesi tanpa record: Tidak Hadir,
+        // kecuali ada izin disetujui → Izin. Record scan tetap menang atas izin.
+        status: record ? record.status : session ? (onLeave.has(student.id) ? 'izin' : 'tidak hadir') : null,
         scannedAt: record?.scannedAt ?? null,
         // Id record untuk aksi guru (mis. batalkan absensi); null saat belum scan.
         recordId: record?.id ?? null,
@@ -39,6 +42,13 @@ export const reportsService = {
     })();
     const sessionDates = reportsRepository.sessionDates(month);
     const records = reportsRepository.recordsInRange(range.startMs, range.endMs);
+    const approvedLeaves = reportsRepository.approvedLeavesInRange(range.startMs, range.endMs);
+    const leaveDaysByStudent = new Map<string, Set<string>>();
+    for (const leave of approvedLeaves) {
+      const set = leaveDaysByStudent.get(leave.studentId) ?? new Set<string>();
+      set.add(leave.date);
+      leaveDaysByStudent.set(leave.studentId, set);
+    }
 
     const perStudent = new Map<string, { hadir: number; telat: number; days: Set<string> }>();
     for (const record of records) {
@@ -51,6 +61,16 @@ export const reportsService = {
 
     const rows = (reportsRepository.activeStudents(query.classId) as StudentRow[]).map((student) => {
       const entry = perStudent.get(student.id);
+      const days = entry?.days ?? new Set<string>();
+      const leaveDays = leaveDaysByStudent.get(student.id) ?? new Set<string>();
+      // Hari bersesi tanpa record dibagi: ada izin disetujui → Izin, selainnya Alfa.
+      let izin = 0;
+      let tidakHadir = 0;
+      for (const date of sessionDates) {
+        if (days.has(date)) continue;
+        if (leaveDays.has(date)) izin += 1;
+        else tidakHadir += 1;
+      }
       return {
         studentId: student.id,
         nis: student.nis,
@@ -58,7 +78,8 @@ export const reportsService = {
         className: student.className ?? 'Tanpa Kelas',
         hadir: entry?.hadir ?? 0,
         telat: entry?.telat ?? 0,
-        tidakHadir: Math.max(sessionDates.length - (entry?.days.size ?? 0), 0),
+        izin,
+        tidakHadir,
       };
     });
     return { month, sessionCount: sessionDates.length, rows };

@@ -23,7 +23,7 @@ export const buildDailyWorkbook = async (report: DailyReport) => {
         className: cls.className,
         nis: student.nis,
         fullName: student.fullName,
-        status: student.status === null ? '-' : student.status === 'tidak hadir' ? 'Tidak Hadir' : student.status === 'hadir' ? 'Hadir' : 'Telat',
+        status: student.status === null ? '-' : student.status === 'tidak hadir' ? 'Tidak Hadir' : student.status === 'hadir' ? 'Hadir' : student.status === 'izin' ? 'Izin' : 'Telat',
         time: student.scannedAt
           ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(student.scannedAt))
           : '',
@@ -43,6 +43,7 @@ export const buildMonthlyWorkbook = async (report: MonthlyReport) => {
     { header: 'Nama', key: 'fullName', width: 30 },
     { header: 'Hadir', key: 'hadir', width: 8 },
     { header: 'Telat', key: 'telat', width: 8 },
+    { header: 'Izin', key: 'izin', width: 8 },
     { header: 'Tidak Hadir', key: 'tidakHadir', width: 12 },
   ];
   for (const row of report.rows) sheet.addRow(row);

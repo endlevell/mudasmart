@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { EmptyState } from '../../components/ui/empty-state';
+import { PressableScale } from '../../components/ui/pressable-scale';
 import { Select } from '../../components/ui/select';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, radius, spacing, type } from '../../constants/theme';
@@ -12,12 +13,14 @@ import { ScreenHeader } from '../../components/ui/screen-header';
 import { toast } from '../../components/ui/toast';
 import { classesApi, type ClassRoom } from '../../api/classes.api';
 import { attendanceApi } from '../../api/attendance.api';
+import { leavesApi, type LeaveListItem } from '../../api/leaves.api';
 import { reportsApi, type DailyReport, type MonthlyReport } from '../../api/reports.api';
 import { useAuthStore } from '../../store/auth-store';
 
-const statusTone = (status: string | null): { tone: 'success' | 'warning' | 'danger' | 'neutral'; label: string } => {
+const statusTone = (status: string | null): { tone: 'success' | 'warning' | 'danger' | 'neutral' | 'info'; label: string } => {
   if (status === 'hadir') return { tone: 'success', label: 'Hadir' };
   if (status === 'telat') return { tone: 'warning', label: 'Telat' };
+  if (status === 'izin') return { tone: 'info', label: 'Izin' };
   if (status === 'tidak hadir') return { tone: 'danger', label: 'Tidak Hadir' };
   return { tone: 'neutral', label: '-' };
 };
@@ -26,6 +29,7 @@ const chipTones = {
   success: { bg: colors.primary100, fg: colors.primary700 },
   warning: { bg: colors.warningBg, fg: '#B45309' },
   danger: { bg: colors.dangerBg, fg: colors.danger },
+  info: { bg: colors.infoBg, fg: colors.info },
 };
 
 // Chip angka rekap bulanan — muat di baris sendiri agar tidak meluber dari kartu.
@@ -69,11 +73,12 @@ function ClassBarChart({ data }: { data: ClassRate[] }) {
 // Rekap guru — tab Harian/Bulanan + grafik + filter kelas + export xlsx.
 export default function RekapScreen() {
   const accessToken = useAuthStore((state) => state.session?.accessToken);
-  const [tab, setTab] = useState<'daily' | 'monthly'>('daily');
+  const [tab, setTab] = useState<'daily' | 'monthly' | 'izin'>('daily');
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [classId, setClassId] = useState<string | null>(null);
   const [daily, setDaily] = useState<DailyReport | null>(null);
   const [monthly, setMonthly] = useState<MonthlyReport | null>(null);
+  const [leaves, setLeaves] = useState<LeaveListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -86,9 +91,9 @@ export default function RekapScreen() {
 
   const load = useCallback(async () => {
     try {
-      const params = { classId: classId ? Number(classId) : undefined };
-      if (tab === 'daily') setDaily(await reportsApi.daily(params));
-      else setMonthly(await reportsApi.monthly(params));
+      if (tab === 'daily') setDaily(await reportsApi.daily({ classId: classId ? Number(classId) : undefined }));
+      else if (tab === 'monthly') setMonthly(await reportsApi.monthly({ classId: classId ? Number(classId) : undefined }));
+      else setLeaves((await leavesApi.list()).data);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat rekap');
@@ -100,7 +105,7 @@ export default function RekapScreen() {
   }, [load]);
 
   const exportReport = async () => {
-    if (!accessToken) return;
+    if (!accessToken || tab === 'izin') return;
     setPending(true);
     try {
       await reportsApi.download(tab, accessToken, { classId: classId ? Number(classId) : undefined });
@@ -174,14 +179,33 @@ export default function RekapScreen() {
     classRates.sort((a, b) => b.pct - a.pct);
   }
 
+  const reviewLeave = (leave: LeaveListItem, status: 'approved' | 'rejected') => {
+    void (async () => {
+      try {
+        await leavesApi.review(leave.id, status);
+        toast.show({
+          tone: 'success',
+          title: status === 'approved' ? 'Izin disetujui' : 'Izin ditolak',
+          message: `${leave.fullName} · ${leave.date}`,
+        });
+        await load();
+      } catch (e) {
+        toast.show({ tone: 'danger', title: 'Gagal memproses', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
+      }
+    })();
+  };
+
+  const pendingLeaves = leaves.filter((leave) => leave.status === 'pending');
+  const decidedLeaves = leaves.filter((leave) => leave.status !== 'pending');
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.backgroundAlt }} contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
-      <ScreenHeader title="Rekap Absensi" subtitle="Harian · Bulanan · Export Excel" />
+      <ScreenHeader title="Rekap Absensi" subtitle="Harian · Bulanan · Izin · Export" />
       <View style={styles.content}>
         <View style={styles.tabs}>
-          {(['daily', 'monthly'] as const).map((value) => (
+          {(['daily', 'monthly', 'izin'] as const).map((value) => (
             <Pressable key={value} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabActive]}>
-              <Text style={[styles.tabText, tab === value && styles.tabTextActive]}>{value === 'daily' ? 'Harian' : 'Bulanan'}</Text>
+              <Text style={[styles.tabText, tab === value && styles.tabTextActive]}>{value === 'daily' ? 'Harian' : value === 'monthly' ? 'Bulanan' : 'Izin'}</Text>
             </Pressable>
           ))}
         </View>
@@ -293,15 +317,71 @@ export default function RekapScreen() {
                       <Text style={[styles.name, styles.nameShrink]}>{row.fullName}</Text>
                       <Text style={styles.meta}>{row.className}</Text>
                     </View>
-                    <View style={styles.countRow}>
-                      <StatChip value={row.hadir} label="Hadir" tone="success" />
-                      <StatChip value={row.telat} label="Telat" tone="warning" />
-                      <StatChip value={row.tidakHadir} label="Alfa" tone="danger" />
-                    </View>
+              <View style={styles.countRow}>
+                <StatChip value={row.hadir} label="Hadir" tone="success" />
+                <StatChip value={row.telat} label="Telat" tone="warning" />
+                <StatChip value={row.izin} label="Izin" tone="info" />
+                <StatChip value={row.tidakHadir} label="Alfa" tone="danger" />
+              </View>
                   </View>
                 ))}
               </Card>
             </Animated.View>
+          </>
+        ) : null}
+
+        {tab === 'izin' ? (
+          <>
+            <Animated.View entering={FadeInDown.delay(40)}>
+              <Card>
+                <Text style={styles.classTitle}>Menunggu Persetujuan</Text>
+                {pendingLeaves.length === 0 ? (
+                  <Text style={styles.emptyNote}>Tidak ada pengajuan baru.</Text>
+                ) : (
+                  pendingLeaves.map((leave) => (
+                    <View key={leave.id} style={styles.leaveRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.name}>{leave.fullName}</Text>
+                        <Text style={styles.meta}>
+                          {leave.date} · {leave.type === 'sakit' ? 'Sakit' : 'Izin'}
+                          {leave.className ? ` · ${leave.className}` : ''}
+                        </Text>
+                        <Text numberOfLines={2} style={styles.meta}>
+                          {leave.reason}
+                        </Text>
+                      </View>
+                      <View style={styles.leaveActions}>
+                        <PressableScale onPress={() => reviewLeave(leave, 'approved')} style={[styles.leaveBtn, { backgroundColor: colors.primary100 }]}>
+                          <Text style={[styles.leaveBtnText, { color: colors.primary700 }]}>Setujui</Text>
+                        </PressableScale>
+                        <PressableScale onPress={() => reviewLeave(leave, 'rejected')} style={[styles.leaveBtn, { backgroundColor: colors.dangerBg }]}>
+                          <Text style={[styles.leaveBtnText, { color: colors.danger }]}>Tolak</Text>
+                        </PressableScale>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </Card>
+            </Animated.View>
+
+            {decidedLeaves.length > 0 ? (
+              <Animated.View entering={FadeInDown.delay(90)}>
+                <Card>
+                  <Text style={styles.classTitle}>Riwayat Keputusan</Text>
+                  {decidedLeaves.map((leave) => (
+                    <View key={leave.id} style={styles.row}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.name}>{leave.fullName}</Text>
+                        <Text style={styles.meta}>
+                          {leave.date} · {leave.type === 'sakit' ? 'Sakit' : 'Izin'}
+                        </Text>
+                      </View>
+                      <Badge label={leave.status === 'approved' ? 'Disetujui' : 'Ditolak'} tone={leave.status === 'approved' ? 'success' : 'danger'} />
+                    </View>
+                  ))}
+                </Card>
+              </Animated.View>
+            ) : null}
           </>
         ) : null}
 
@@ -369,5 +449,10 @@ const styles = StyleSheet.create({
   chartSegHadir: { backgroundColor: colors.primary500 },
   chartSegTelat: { backgroundColor: colors.warning },
   chartLabel: { fontSize: 10, fontWeight: '600', color: colors.textSecondary, marginTop: 6, textAlign: 'center' },
+  leaveRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.sm },
+  leaveActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  leaveBtn: { borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 6 },
+  leaveBtnText: { fontSize: type.caption.fontSize, fontWeight: '700' },
+  emptyNote: { ...type.caption, color: colors.textSecondary, marginTop: spacing.sm },
   error: { color: colors.danger, fontSize: type.caption.fontSize },
 });

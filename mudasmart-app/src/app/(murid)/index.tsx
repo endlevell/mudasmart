@@ -16,11 +16,12 @@ const dateKey = (value: number | Date) => new Intl.DateTimeFormat('en-CA', { tim
 const timeLabel = (ms: number) =>
   new Intl.DateTimeFormat('id-ID', { timeZone: jakarta, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms));
 
-type DayStatus = 'hadir' | 'telat' | 'alfa';
+type DayStatus = 'hadir' | 'telat' | 'izin' | 'alfa';
 
 interface MonthStats {
   hadir: number;
   telat: number;
+  izin: number;
   alfa: number;
   sessions: number;
 }
@@ -71,22 +72,29 @@ export default function MuridDashboard() {
     try {
       const [current, previous] = await Promise.all([attendanceApi.history(thisMonth), attendanceApi.history(prevMonth)]);
       const byDate = new Map<string, DayStatus>();
+      const approvedLeaves = new Set<string>();
       for (const source of [previous, current]) {
         source.data.forEach((item) => byDate.set(dateKey(item.scannedAt), item.status));
+        (source.leaves ?? []).forEach((leave) => {
+          approvedLeaves.add(leave.date);
+          byDate.set(leave.date, 'izin');
+        });
         source.sessionDates.forEach((date) => {
-          if (!byDate.has(date)) byDate.set(date, 'alfa');
+          if (!byDate.has(date)) byDate.set(date, approvedLeaves.has(date) ? 'izin' : 'alfa');
         });
       }
       let hadir = 0;
       let telat = 0;
+      let izin = 0;
       let alfa = 0;
       byDate.forEach((status, date) => {
         if (!date.startsWith(thisMonth)) return;
         if (status === 'hadir') hadir += 1;
         else if (status === 'telat') telat += 1;
+        else if (status === 'izin') izin += 1;
         else alfa += 1;
       });
-      setStats({ hadir, telat, alfa, sessions: current.sessionDates.length });
+      setStats({ hadir, telat, alfa, izin, sessions: current.sessionDates.length });
 
       const days: Date[] = [];
       const cursor = new Date(now);
@@ -192,6 +200,7 @@ export default function MuridDashboard() {
                 <View style={styles.legend}>
                   <LegendRow color={colors.primary500} value={stats.hadir} label="Hadir" />
                   <LegendRow color={colors.warning} value={stats.telat} label="Telat" />
+                  <LegendRow color={colors.info} value={stats.izin} label="Izin" />
                   <LegendRow color={colors.danger} value={stats.alfa} label="Alfa" />
                   <Text style={styles.legendFoot}>{stats.sessions} hari bersesi bulan ini</Text>
                 </View>
@@ -215,12 +224,14 @@ export default function MuridDashboard() {
                         styles.dayPill,
                         day.status === 'hadir' && { backgroundColor: colors.primary500 },
                         day.status === 'telat' && { backgroundColor: colors.warning },
+                        day.status === 'izin' && { backgroundColor: colors.infoBg },
                         day.status === 'alfa' && { backgroundColor: colors.dangerBg },
                         day.isToday && styles.dayPillToday,
                       ]}
                     >
                       {day.status === 'hadir' ? <Ionicons name="checkmark" size={14} color={colors.textInverse} /> : null}
                       {day.status === 'telat' ? <Ionicons name="time" size={13} color={colors.textInverse} /> : null}
+                      {day.status === 'izin' ? <Ionicons name="information-circle" size={14} color={colors.info} /> : null}
                       {day.status === 'alfa' ? <Ionicons name="close" size={14} color={colors.danger} /> : null}
                     </View>
                   </View>

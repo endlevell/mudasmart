@@ -4,7 +4,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import './db/migrate';
 import { auth, requireAdmin, requireRole } from './middleware/auth';
-import { consumeLogin, consumeRefresh, consumeRegister, consumeScan, failLogin, resetLogin } from './middleware/rate-limit';
+import { consumeLogin, consumeRefresh, consumeRegister, consumeScan, consumeLeave, failLogin, resetLogin } from './middleware/rate-limit';
 import { logger } from './lib/logger';
 import { env } from './config/env';
 import { authService } from './auth/service';
@@ -28,6 +28,12 @@ import { codesService } from './registration-codes/service';
 import { codeParamSchema, createCodeSchema, patchCodeSchema } from './registration-codes/schema';
 import { gurusService } from './gurus/service';
 import { guruIdParamSchema, patchGuruSchema } from './gurus/schema';
+
+import { leavesService } from './leaves/service';
+import { createLeaveSchema, leaveIdParamSchema, listLeavesQuerySchema, reviewLeaveSchema } from './leaves/schema';
+import { consumeLeave } from './middleware/rate-limit';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 const ip = (context: { req: { header(name: string): string | undefined } }) => context.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 const userAgent = (context: { req: { header(name: string): string | undefined } }) => context.req.header('user-agent') ?? 'unknown';
@@ -107,6 +113,45 @@ app.get('/api/attendance/me/today', auth, requireRole('murid'), (context) => con
 app.delete('/api/attendance/records/:id', auth, requireRole('guru'), (context) => {
   attendanceService.cancelRecord(context.get('auth').id, ip(context), parse(context.req.param('id'), recordIdParamSchema, 'Parameter tidak valid'));
   return context.body(null, 204);
+});
+
+// ===== Leave requests (izin/sakit) =====
+const MIME_BY_EXT: Record<string, string> = { '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
+
+app.post('/api/leave-requests', auth, async (context) => {
+  if (!(await consumeLeave(ip(context)))) return context.json({ error: 'Terlalu banyak percobaan' }, 429);
+  const form = await context.req.formData();
+  if (!form) return context.json({ error: 'Data tidak valid' }, 400);
+  const input = parse(
+    {
+      studentId: form.get('studentId') ?? undefined,
+      date: form.get('date'),
+      type: form.get('type'),
+      reason: form.get('reason'),
+    },
+    createLeaveSchema,
+    'Data tidak valid',
+  );
+  const file = form.get('image');
+  let image: { mimeType: string; bytes: Uint8Array } | undefined;
+  if (file && typeof file === 'object' && 'arrayBuffer' in file) {
+    image = { mimeType: file.type, bytes: new Uint8Array(await (file as File).arrayBuffer()) };
+  }
+  return context.json(await leavesService.create(context.get('auth'), ip(context), input, image), 201);
+});
+app.get('/api/leave-requests/me', auth, requireRole('murid'), (context) => context.json({ data: leavesService.mine(context.get('auth').id) }));
+app.get('/api/leave-requests', auth, requireRole('guru'), (context) => context.json({ data: leavesService.list(parse(context.req.query(), listLeavesQuerySchema, 'Parameter tidak valid').status) }));
+app.patch('/api/leave-requests/:id/review', auth, requireRole('guru'), async (context) => context.json(leavesService.review(context.get('auth').id, ip(context), parse(context.req.param('id'), leaveIdParamSchema, 'Parameter tidak valid'), (await body(context.req.raw, reviewLeaveSchema)).status)));
+app.get('/api/leave-requests/:id/image', auth, (context) => {
+  const id = parse(context.req.param('id'), leaveIdParamSchema, 'Parameter tidak valid');
+  const leave = leavesService.imageOf(id);
+  if (!leave?.imagePath) return context.json({ error: 'Lampiran tidak ditemukan' }, 404);
+  if (!leavesService.canViewImage(context.get('auth'), leave)) return context.json({ error: 'Dilarang' }, 403);
+  const uploadDir = process.env.UPLOAD_DIR ?? './data/uploads';
+  const path = join(uploadDir, leave.imagePath);
+  if (!existsSync(path)) return context.json({ error: 'Lampiran tidak ditemukan' }, 404);
+  const ext = leave.imagePath.slice(leave.imagePath.lastIndexOf('.'));
+  return new Response(readFileSync(path), { headers: { 'content-type': MIME_BY_EXT[ext] ?? 'application/octet-stream' } });
 });
 
 // ===== Registration codes (GURU+ADMIN) =====

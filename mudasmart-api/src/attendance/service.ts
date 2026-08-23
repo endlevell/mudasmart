@@ -6,6 +6,7 @@ import { fail } from '../lib/http';
 import { hhmmToMinutes, todayWib, wibMinutes } from '../lib/time';
 import { sessionsRepository } from '../sessions/service';
 import { attendanceRepository } from './repository';
+import { leavesRepository } from '../leaves/repository';
 
 const now = () => Date.now();
 const WIB_TZ = 'Asia/Jakarta';
@@ -112,11 +113,19 @@ export const attendanceService = {
       limit: query.pageSize,
       offset: (query.page - 1) * query.pageSize,
     });
+    // Izin disetujui dalam bulan tsb — dipakai client menandai hari izin & mengurangi alfa.
+    const leaves = query.month
+      ? leavesRepository
+          .approvedBetween(range!.startMs, range!.endMs)
+          .filter((leave) => leave.studentId === studentId)
+          .map((leave) => ({ date: leave.date, type: leave.type }))
+      : [];
     return {
       ...result,
       page: query.page,
       pageSize: query.pageSize,
       sessionDates: query.month ? attendanceRepository.sessionDates(query.month) : [],
+      leaves,
     };
   },
 

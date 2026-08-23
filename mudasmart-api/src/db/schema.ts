@@ -15,3 +15,23 @@ export const gates = sqliteTable('gates', { id: integer().primaryKey({ autoIncre
 export const attendanceConfig = sqliteTable('attendance_config', { id: integer().primaryKey({ autoIncrement: true }), checkInStart: text('check_in_start').notNull(), onTimeCutoff: text('on_time_cutoff').notNull(), checkInEnd: text('check_in_end').notNull(), updatedBy: text('updated_by').references(() => users.id), updatedAt: integer('updated_at').notNull() });
 export const attendanceSessions = sqliteTable('attendance_sessions', { id: integer().primaryKey({ autoIncrement: true }), date: text().notNull().unique(), openedBy: text('opened_by').notNull().references(() => users.id), openedAt: integer('opened_at').notNull(), closedBy: text('closed_by').references(() => users.id), closedAt: integer('closed_at'), status: text({ enum: ['open', 'closed'] }).notNull(), createdAt: integer('created_at').notNull() }, (table) => [check('attendance_sessions_status_check', sql`${table.status} in ('open', 'closed')`)]);
 export const attendanceRecords = sqliteTable('attendance_records', { id: integer().primaryKey({ autoIncrement: true }), sessionId: integer('session_id').notNull().references(() => attendanceSessions.id), studentId: text('student_id').notNull().references(() => users.id), classIdSnapshot: integer('class_id_snapshot').notNull().references(() => classes.id), gateId: integer('gate_id').notNull().references(() => gates.id), deviceId: integer('device_id').notNull().references(() => devices.id), scannedAt: integer('scanned_at').notNull(), status: text({ enum: ['hadir', 'telat'] }).notNull(), latitude: real(), longitude: real(), geofencePassed: integer('geofence_passed', { mode: 'boolean' }), clientNonce: text('client_nonce').notNull().unique() }, (table) => [uniqueIndex('attendance_session_student_unique').on(table.sessionId, table.studentId), index('attendance_student_scanned_idx').on(table.studentId, table.scannedAt), index('attendance_class_snapshot_idx').on(table.classIdSnapshot, table.scannedAt)]);
+// Izin/sakit per tanggal — disetujui guru menjadikan status 'izin' pada hari tsb
+// (record scan tetap menang bila murid ternyata datang).
+export const leaveRequests = sqliteTable('leave_requests', {
+  id: integer().primaryKey({ autoIncrement: true }),
+  studentId: text('student_id').notNull().references(() => users.id),
+  date: text().notNull(),
+  type: text({ enum: ['sakit', 'izin'] }).notNull(),
+  reason: text().notNull(),
+  imagePath: text('image_path'),
+  status: text({ enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'),
+  createdBy: text('created_by').notNull().references(() => users.id),
+  reviewedBy: text('reviewed_by').references(() => users.id),
+  reviewedAt: integer('reviewed_at'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => [
+  uniqueIndex('leave_requests_student_date_unique').on(table.studentId, table.date),
+  check('leave_requests_type_check', sql`${table.type} in ('sakit', 'izin')`),
+  check('leave_requests_status_check', sql`${table.status} in ('pending', 'approved', 'rejected')`),
+]);

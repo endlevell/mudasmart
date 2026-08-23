@@ -20,7 +20,7 @@ export const attendanceApi = {
     return api.post<ScanResult>('/api/attendance/scan', { qrCodeValue, clientNonce, deviceId, ...coords }, true);
   },
   history: (month?: string) =>
-    api.get<{ data: HistoryItem[]; total: number; page: number; pageSize: number; sessionDates: string[] }>(
+    api.get<{ data: HistoryItem[]; total: number; page: number; pageSize: number; sessionDates: string[]; leaves?: { date: string; type: 'sakit' | 'izin' }[] }>(
       `/api/attendance/me${month ? `?month=${month}` : ''}`,
       true,
     ),

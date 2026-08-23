@@ -476,3 +476,56 @@ test('attendance cancel: guru deletes record, murid blocked, unknown id 404, res
   const logs = db.select().from(auditLogs).all();
   expect(logs.some((log) => log.action === 'attendance_cancelled' && log.userId === guru.user.id)).toBe(true);
 });
+
+// ===== Izin/sakit (leave request) =====
+test('leave requests: murid submits, guru approves, reports count izin', async () => {
+  process.env.UPLOAD_DIR = '/tmp/muda-uploads-test';
+  const admin = await makeGuru('admin@example.com', true);
+  const guru = await makeGuru('guru3@example.com');
+  const murid = await makeMurid('murid7@example.com');
+
+  const cls = db.insert(classes).values({ name: 'X IPA 8', gradeLevel: 10, academicYear: '2026/2027', createdAt: Date.now(), updatedAt: Date.now() }).returning().get();
+  await send('PATCH', `/api/students/${murid.user.id}`, { classId: cls.id }, bearer(admin.accessToken));
+  const session = db.insert(attendanceSessions).values({ date: '2030-03-05', openedBy: admin.user.id, openedAt: Date.now(), status: 'open', createdAt: Date.now() }).returning().get();
+
+  // Murid mengajukan sakit dengan lampiran foto.
+  const form = new FormData();
+  form.set('date', '2030-03-05');
+  form.set('type', 'sakit');
+  form.set('reason', 'Demam tinggi, ada surat dokter');
+  form.append('image', new File([new Uint8Array([137, 80, 78, 71])], 'surat.png', { type: 'image/png' }));
+  const created = await app.request('/api/leave-requests', { method: 'POST', headers: bearer(murid.accessToken), body: form });
+  expect(created.status).toBe(201);
+  expect(((await created.json()) as { status: string }).status).toBe('pending');
+
+  // Satu murid satu tanggal.
+  const dup = await app.request('/api/leave-requests', { method: 'POST', headers: bearer(murid.accessToken), body: form });
+  expect(dup.status).toBe(409);
+
+  // Murid tidak bisa menyetujui; guru melihat daftar pending lalu menyetujui.
+  expect((await send('PATCH', '/api/leave-requests/1/review', { status: 'approved' }, bearer(murid.accessToken))).status).toBe(403);
+  const pendingList = await (await app.request('/api/leave-requests?status=pending', { headers: bearer(guru.accessToken) })).json() as { data: Array<{ id: number; studentId: string }> };
+  const target = pendingList.data.find((row) => row.studentId === murid.user.id);
+  expect(target).toBeDefined();
+  expect((await send('PATCH', `/api/leave-requests/${target!.id}/review`, { status: 'approved' }, bearer(guru.accessToken))).status).toBe(200);
+  expect((await send('PATCH', `/api/leave-requests/${target!.id}/review`, { status: 'rejected' }, bearer(guru.accessToken))).status).toBe(409);
+
+  // Laporan harian & bulanan mencatat izin, bukan alfa.
+  const daily = await (await app.request(`/api/reports/daily?date=${session.date}`, { headers: bearer(guru.accessToken) })).json() as { classes: Array<{ students: Array<{ id: string; status: string }> }> };
+  const dailyStudent = daily.classes.flatMap((c) => c.students).find((s) => s.id === murid.user.id);
+  expect(dailyStudent?.status).toBe('izin');
+
+  const monthly = await (await app.request('/api/reports/monthly?month=2030-03', { headers: bearer(guru.accessToken) })).json() as { rows: Array<{ studentId: string; izin: number; tidakHadir: number }> };
+  const monthlyRow = monthly.rows.find((row) => row.studentId === murid.user.id);
+  expect(monthlyRow?.izin).toBe(1);
+  expect(monthlyRow?.tidakHadir).toBe(0);
+
+  // Riwayat murid menyertakan daftar izin.
+  const history = await (await app.request('/api/attendance/me?month=2030-03', { headers: bearer(murid.accessToken) })).json() as { leaves: Array<{ date: string }> };
+  expect(history.leaves.some((leave) => leave.date === '2030-03-05')).toBe(true);
+
+  // Lampiran hanya bisa dilihat pemilik atau guru.
+  const otherMurid = await makeMurid('murid8@example.com');
+  expect((await app.request('/api/leave-requests/1/image', { headers: bearer(otherMurid.accessToken) })).status).toBe(403);
+  expect((await app.request('/api/leave-requests/1/image', { headers: bearer(murid.accessToken) })).status).toBe(200);
+});

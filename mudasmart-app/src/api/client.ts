@@ -37,11 +37,13 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, init: RequestInit, auth: boolean, retried: boolean): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
+  const isFormData = init.body instanceof FormData;
+  if (init.body && !isFormData && !headers.has('content-type')) headers.set('content-type', 'application/json');
   const tokens = getTokens();
   if (auth && tokens.accessToken) headers.set('authorization', `Bearer ${tokens.accessToken}`);
 
-  const response = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  const body = isFormData ? init.body : typeof init.body === 'string' || init.body === undefined ? init.body : JSON.stringify(init.body);
+  const response = await fetch(`${BASE_URL}${path}`, { ...init, body, headers });
 
   // Refresh sekali pada 401 untuk endpoint berauth; endpoint auth tidak di-retry.
   if (response.status === 401 && auth && !retried && !path.startsWith('/api/auth/')) {
@@ -81,7 +83,7 @@ async function tryRefresh(refreshToken: string | null): Promise<boolean> {
 export const api = {
   get: <T>(path: string, auth = true) => request<T>(path, { method: 'GET' }, auth, false),
   post: <T>(path: string, body: unknown, auth = true) =>
-    request<T>(path, { method: 'POST', body: JSON.stringify(body) }, auth, false),
+    request<T>(path, { method: 'POST', body: typeof body === 'string' || body instanceof FormData ? body : JSON.stringify(body) }, auth, false),
   patch: <T>(path: string, body: unknown, auth = true) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }, auth, false),
   del: <T>(path: string, auth = true) => request<T>(path, { method: 'DELETE' }, auth, false),

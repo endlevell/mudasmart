@@ -2,6 +2,7 @@ import { and, asc, eq, gte, lt } from 'drizzle-orm';
 import { db } from '../db';
 import { attendanceRecords, classes, studentProfiles, users } from '../db/schema';
 import { sessionsRepository } from '../sessions/service';
+import { leavesRepository } from '../leaves/repository';
 
 const WIB_OFFSET_MS = 7 * 3_600_000;
 const dayRange = (date: string) => {
@@ -34,4 +35,6 @@ export const reportsRepository = {
   },
   sessionByDate: (date: string) => sessionsRepository.byDate(date),
   sessionDates: (prefix: string) => sessionsRepository.sessionDates(prefix),
+  approvedLeavesOn: (date: string) => leavesRepository.approvedBetween(Date.parse(`${date}T00:00:00+07:00`), Date.parse(`${date}T00:00:00+07:00`) + 86_400_000),
+  approvedLeavesInRange: (startMs: number, endMs: number) => leavesRepository.approvedBetween(startMs, endMs),
 };
