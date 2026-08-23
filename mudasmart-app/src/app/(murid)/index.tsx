@@ -40,6 +40,9 @@ export default function MuridDashboard() {
 
   useEffect(() => {
     void load();
+    // Polling ringan: status sesi/absen ter-update otomatis tanpa logout-login.
+    const interval = setInterval(() => void load(), 15_000);
+    return () => clearInterval(interval);
   }, [load]);
 
   return (

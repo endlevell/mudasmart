@@ -30,6 +30,9 @@ export default function GuruDashboard() {
 
   useEffect(() => {
     void loadSession();
+    // Polling ringan agar kartu sesi tetap sinkron.
+    const interval = setInterval(() => void loadSession(), 15_000);
+    return () => clearInterval(interval);
   }, [loadSession]);
 
   const toggle = async () => {

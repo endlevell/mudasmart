@@ -1,4 +1,5 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Crypto from 'expo-crypto';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
@@ -15,7 +16,7 @@ export default function ScanScreen() {
   const [state, setState] = useState<ScanState>('idle');
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const nonceRef = useRef<string>(crypto.randomUUID());
+  const nonceRef = useRef<string>(Crypto.randomUUID());
   const lockedRef = useRef(false);
 
   const handleScan = async (event: { data: string }) => {
