@@ -5,7 +5,7 @@
   "workspaces": ["mudasmart-api", "mudasmart-app"],
   "scripts": {
     "dev:api": "bun run --cwd mudasmart-api dev",
-    "dev:app": "bun run --cwd mudasmart-app start",
+    "dev:app": "bun run --cwd mudasmart-app start --tunnel",
     "check": "bun run --cwd mudasmart-api check",
     "test": "bun run --cwd mudasmart-api test"
   },
