@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { ScreenHeader } from '../../components/ui/screen-header';
 import { Select } from '../../components/ui/select';
+import { toast } from '../../components/ui/toast';
 import { colors, radius, spacing, type } from '../../constants/theme';
 import { codesApi, type RegistrationCode } from '../../api/codes.api';
 import { configApi } from '../../api/sessions.api';
@@ -17,7 +18,6 @@ export default function PengaturanScreen() {
   const [codes, setCodes] = useState<RegistrationCode[]>([]);
   const [newCode, setNewCode] = useState({ code: '', roleAllowed: 'murid', maxUses: '' });
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const load = useCallback(async () => {
@@ -44,10 +44,10 @@ export default function PengaturanScreen() {
     setPending(true);
     try {
       await configApi.updateAttendance(config);
-      setNotice('Jam absen tersimpan');
+      toast.show({ tone: 'success', title: 'Tersimpan', message: 'Jam absen berhasil diperbarui.' });
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal menyimpan jam absen');
+      toast.show({ tone: 'danger', title: 'Gagal menyimpan', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
     } finally {
       setPending(false);
     }
@@ -68,10 +68,10 @@ export default function PengaturanScreen() {
       });
       setNewCode({ code: '', roleAllowed: 'murid', maxUses: '' });
       await load();
-      setNotice(`Kode ${code} dibuat`);
+      toast.show({ tone: 'success', title: 'Kode dibuat', message: `Kode ${code} siap dipakai registrasi.` });
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal membuat kode');
+      toast.show({ tone: 'danger', title: 'Gagal membuat kode', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
     } finally {
       setPending(false);
     }
@@ -179,12 +179,6 @@ export default function PengaturanScreen() {
         </Animated.View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        {notice ? (
-          <View style={styles.noticeBox}>
-            <Ionicons name="checkmark-circle" size={15} color={colors.primary700} />
-            <Text style={styles.notice}>{notice}</Text>
-          </View>
-        ) : null}
       </View>
     </ScrollView>
   );
@@ -211,7 +205,5 @@ const styles = StyleSheet.create({
   toggleBtn: { backgroundColor: colors.backgroundAlt, borderColor: colors.border, borderRadius: radius.full, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6 },
   toggleText: { fontSize: type.caption.fontSize, fontWeight: '700' },
   divider: { backgroundColor: colors.border, height: 1, marginVertical: spacing.sm },
-  noticeBox: { alignItems: 'center', backgroundColor: colors.primary50, borderRadius: radius.md, flexDirection: 'row', gap: 6, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2 },
-  notice: { color: colors.primary700, fontSize: type.caption.fontSize, fontWeight: '600' },
   error: { color: colors.danger, fontSize: type.caption.fontSize },
 });

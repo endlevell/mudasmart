@@ -9,6 +9,7 @@ import { Select } from '../../components/ui/select';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, radius, spacing, type } from '../../constants/theme';
 import { ScreenHeader } from '../../components/ui/screen-header';
+import { toast } from '../../components/ui/toast';
 import { classesApi, type ClassRoom } from '../../api/classes.api';
 import { attendanceApi } from '../../api/attendance.api';
 import { reportsApi, type DailyReport, type MonthlyReport } from '../../api/reports.api';
@@ -103,9 +104,10 @@ export default function RekapScreen() {
     setPending(true);
     try {
       await reportsApi.download(tab, accessToken, { classId: classId ? Number(classId) : undefined });
+      toast.show({ tone: 'success', title: 'Export berhasil', message: 'File Excel siap dibagikan.' });
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal mengekspor');
+      toast.show({ tone: 'danger', title: 'Gagal mengekspor', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
     } finally {
       setPending(false);
     }
@@ -125,9 +127,10 @@ export default function RekapScreen() {
             void (async () => {
               try {
                 await attendanceApi.cancelRecord(student.recordId!);
+                toast.show({ tone: 'success', title: 'Absensi dibatalkan', message: `${student.fullName} bisa scan ulang sekarang.` });
                 await load();
               } catch (e) {
-                setError(e instanceof Error ? e.message : 'Gagal membatalkan absensi');
+                toast.show({ tone: 'danger', title: 'Gagal membatalkan', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
               }
             })();
           },

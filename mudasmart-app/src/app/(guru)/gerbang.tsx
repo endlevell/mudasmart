@@ -12,6 +12,7 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { PressableScale } from '../../components/ui/pressable-scale';
 import { ScreenHeader } from '../../components/ui/screen-header';
+import { toast } from '../../components/ui/toast';
 import { colors, gradients, radius, shadow, spacing, type } from '../../constants/theme';
 import { gatesApi, type Gate } from '../../api/gates.api';
 
@@ -75,9 +76,10 @@ export default function KelolaGerbangScreen() {
       });
       setForm({ name: '', latitude: '', longitude: '', radiusMeters: '' });
       await load();
+      toast.show({ tone: 'success', title: 'Gerbang ditambahkan', message: `${form.name.trim()} siap dipakai absensi.` });
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal menambah gerbang');
+      toast.show({ tone: 'danger', title: 'Gagal menambah gerbang', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
     } finally {
       setPending(false);
     }
@@ -94,8 +96,9 @@ export default function KelolaGerbangScreen() {
             try {
               await gatesApi.update(gate.id, { regenerateQr: true });
               await load();
+              toast.show({ tone: 'success', title: 'QR diregenerasi', message: `QR baru "${gate.name}" siap dicetak.` });
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'Gagal regenerasi QR');
+              toast.show({ tone: 'danger', title: 'Gagal regenerasi QR', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
             }
           })();
         },

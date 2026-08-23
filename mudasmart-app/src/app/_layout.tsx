@@ -2,6 +2,7 @@ import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { onboardingSeenSync, primeOnboardingFlag } from '@/utils/secure-storage';
+import { ToastHost } from '../components/ui/toast';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -45,5 +46,10 @@ export default function RootLayout() {
     return () => clearTimeout(timer);
   }, [hydrated, flagPrimed, session, segments, router]);
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }} />
+      <ToastHost />
+    </>
+  );
 }

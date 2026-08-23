@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { Card } from '../../components/ui/card';
 import { LiquidButton } from '../../components/ui/liquid-button';
 import { PressableScale } from '../../components/ui/pressable-scale';
+import { toast } from '../../components/ui/toast';
 import { colors, gradients, radius, spacing, type } from '../../constants/theme';
 import { sessionsApi, type AttendanceSession } from '../../api/sessions.api';
 import { reportsApi, type DailyReport } from '../../api/reports.api';
@@ -92,11 +93,17 @@ export default function GuruDashboard() {
   const toggle = async () => {
     setPending(true);
     try {
-      setSession(session?.status === 'open' ? await sessionsApi.close() : await sessionsApi.open());
+      const updated = session?.status === 'open' ? await sessionsApi.close() : await sessionsApi.open();
+      setSession(updated);
+      toast.show({
+        tone: 'success',
+        title: updated.status === 'open' ? 'Sesi dibuka' : 'Sesi ditutup',
+        message: updated.status === 'open' ? 'Murid sekarang bisa scan QR gerbang.' : 'Murid tidak bisa scan lagi hari ini.',
+      });
       void loadSummary();
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal mengubah sesi');
+      toast.show({ tone: 'danger', title: 'Gagal mengubah sesi', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
     } finally {
       setPending(false);
     }

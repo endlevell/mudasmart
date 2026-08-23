@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { toast } from '../../components/ui/toast';
 import { colors, radius, shadow, spacing, type } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth-store';
 import { fieldErrors, registerSchema } from '../../utils/validation';
@@ -29,10 +31,12 @@ export default function RegisterScreen() {
       // confirmPassword hanya untuk validasi sisi client — jangan dikirim ke server (.strict() akan menolak).
       const { confirmPassword: _ignored, ...payload } = parsed.data;
       await register(payload);
+      toast.show({ tone: 'success', title: 'Akun dibuat', message: 'Selamat bergabung di MUDASmart.' });
       // Redirect ditangani root layout berdasarkan role hasil registrasi.
       router.replace('/(murid)');
-    } catch {
-      // error sudah disimpan di store.
+    } catch (e) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      toast.show({ tone: 'danger', title: 'Gagal mendaftar', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
     }
   };
 

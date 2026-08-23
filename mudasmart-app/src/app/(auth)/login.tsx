@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { toast } from '../../components/ui/toast';
 import { colors, radius, shadow, spacing, type } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth-store';
 import { fieldErrors, loginSchema } from '../../utils/validation';
@@ -29,8 +31,10 @@ export default function LoginScreen() {
     setErrors({});
     try {
       await login(parsed.data);
-    } catch {
-      // error sudah disimpan di store; ditampilkan di bawah.
+      toast.show({ tone: 'success', title: 'Masuk berhasil', message: 'Selamat datang kembali.' });
+    } catch (e) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      toast.show({ tone: 'danger', title: 'Gagal masuk', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
     }
   };
 
