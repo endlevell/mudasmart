@@ -1,0 +1,6 @@
+# Linker isolated (default Bun) membuat expo-modules-autolinking melewatkan
+# modul native (expo-secure-store, react-native-view-shot, dst.) di monorepo ini —
+# build release jadi crash "Cannot find native module". Wajib hoisted,
+# berlaku untuk instalasi lokal maupun EAS Build.
+[install]
+linker = "hoisted"
