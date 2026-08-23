@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { toast } from '../../components/ui/toast';
+import { MudasmartLogo } from '../../components/brand/logo';
 import { colors, radius, shadow, spacing, type } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth-store';
 import { fieldErrors, loginSchema } from '../../utils/validation';
@@ -46,7 +47,7 @@ export default function LoginScreen() {
           <View style={styles.orbTwo} />
           <View style={styles.orbThree} />
           <View style={styles.brandMark}>
-            <Ionicons name="scan" size={26} color={colors.textInverse} />
+            <MudasmartLogo size={34} variant="light" />
           </View>
           <Text style={styles.title}>MUDASmart</Text>
           <Text style={styles.tagline}>Absensi SMA Muhammadiyah 2 Tangerang</Text>

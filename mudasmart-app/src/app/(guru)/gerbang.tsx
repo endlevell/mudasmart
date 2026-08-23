@@ -13,6 +13,7 @@ import { Input } from '../../components/ui/input';
 import { PressableScale } from '../../components/ui/pressable-scale';
 import { ScreenHeader } from '../../components/ui/screen-header';
 import { toast } from '../../components/ui/toast';
+import { MudasmartLogo } from '../../components/brand/logo';
 import { colors, gradients, radius, shadow, spacing, type } from '../../constants/theme';
 import { gatesApi, type Gate } from '../../api/gates.api';
 
@@ -25,7 +26,7 @@ function QrCard({ gate, size }: { gate: Gate; size: number }) {
           <Text style={styles.printBrand}>MUDASmart</Text>
           <Text style={styles.printSub}>SMA Muhammadiyah 2 Tangerang</Text>
         </View>
-        <Ionicons name="qr-code" size={22} color="rgba(255,255,255,0.85)" />
+        <MudasmartLogo size={26} variant="light" />
       </LinearGradient>
       <View style={styles.printBody}>
         <QRCode size={size} value={gate.qrCodeValue} />

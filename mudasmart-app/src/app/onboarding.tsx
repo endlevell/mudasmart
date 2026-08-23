@@ -6,6 +6,7 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTim
 import { router } from 'expo-router';
 import { Button } from '../components/ui/button';
 import { PressableScale } from '../components/ui/pressable-scale';
+import { MudasmartLogo } from '../components/brand/logo';
 import { colors, radius, spacing, type } from '../constants/theme';
 import { markOnboardingSeen } from '../utils/secure-storage';
 
@@ -39,7 +40,7 @@ export default function OnboardingScreen() {
       art: (
         <View style={styles.artStage}>
           <View style={styles.brandMark}>
-            <Ionicons name="scan" size={44} color={colors.textInverse} />
+            <MudasmartLogo size={64} variant="light" />
           </View>
           <View style={[styles.orb, styles.orbA]} />
           <View style={[styles.orb, styles.orbB]} />

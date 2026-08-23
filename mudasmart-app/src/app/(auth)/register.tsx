@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { toast } from '../../components/ui/toast';
+import { MudasmartLogo } from '../../components/brand/logo';
 import { colors, radius, shadow, spacing, type } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth-store';
 import { fieldErrors, registerSchema } from '../../utils/validation';
@@ -47,7 +48,7 @@ export default function RegisterScreen() {
           <View style={styles.orbOne} />
           <View style={styles.orbTwo} />
           <View style={styles.brandMark}>
-            <Ionicons name="person-add-outline" size={24} color={colors.textInverse} />
+            <MudasmartLogo size={32} variant="light" />
           </View>
           <Text style={styles.title}>Buat Akun</Text>
           <Text style={styles.tagline}>Gunakan kode sekolah yang diberikan admin</Text>

@@ -1,0 +1,35 @@
+--------- beginning of crash
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: FATAL EXCEPTION: main
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: Process: id.sch.mudasmart.app, PID: 17728
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: java.lang.IllegalStateException: addViewAt: failed to insert view [312] into parent [318] at index 0
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.fabric.mounting.SurfaceMountingManager.addViewAt(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:257)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.fabric.mounting.mountitems.IntBufferBatchMountItem.execute(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:464)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.fabric.mounting.MountItemDispatcher.executeOrEnqueue(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:56)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.fabric.mounting.MountItemDispatcher.dispatchMountItems(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:38)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.fabric.mounting.MountItemDispatcher.tryDispatchMountItems(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:10)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.fabric.FabricUIManager$DispatchUIFrameCallback.doFrameGuarded(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:95)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.uimanager.M.doFrame(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:1)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.modules.core.b.g(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:32)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.modules.core.b.a(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:1)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at H3.h.doFrame(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:3)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1449)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1459)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.view.Choreographer.doCallbacks(Choreographer.java:1089)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.view.Choreographer.doFrame(Choreographer.java:998)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1431)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:942)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:210)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:299)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:8261)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:559)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:954)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: Caused by: java.lang.IllegalStateException: The specified child already has a parent. You must call removeView() on the child's parent first.
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.view.ViewGroup.addViewInner(ViewGroup.java:5262)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.view.ViewGroup.addView(ViewGroup.java:5091)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at android.view.ViewGroup.addView(ViewGroup.java:5031)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.views.view.ReactClippingViewManager.addView(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:6)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.views.view.ReactClippingViewManager.addView(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:1)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	at com.facebook.react.fabric.mounting.SurfaceMountingManager.addViewAt(r8-map-id-b476c5a5cd40f5d44811137f75a8dc8b21136abf229e4f19ecc4a047e85f5345:198)
+08-23 20:30:56.442 17728 17728 E AndroidRuntime: 	... 22 more
