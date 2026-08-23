@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "mudasmart-app",
-    "slug": "mudasmart-app",
+    "slug": "mudasmart",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -27,7 +27,10 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
+      // configureAndroidBackup: false — workaround bug expo-secure-store 55.0.17:
+      // plugin menulis referensi @xml/secure_store_* ke manifest tanpa membuat file resource-nya,
+      // bikin AAPT resource linking gagal saat build release.
+      ["expo-secure-store", { "configureAndroidBackup": false }],
       [
         "expo-build-properties",
         {
@@ -52,6 +55,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f12dde98-a605-4fa5-b76f-7c69d8b873df"
+      }
+    },
+    "owner": "endlevels-team"
   }
 }
