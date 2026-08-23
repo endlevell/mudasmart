@@ -24,6 +24,8 @@ import { historyQuerySchema, scanSchema } from './attendance/schema';
 import { reportsService } from './reports/service';
 import { dailyQuerySchema, exportQuerySchema, monthlyQuerySchema } from './reports/schema';
 import { buildDailyWorkbook, buildMonthlyWorkbook } from './reports/export';
+import { codesService } from './registration-codes/service';
+import { codeParamSchema, createCodeSchema, patchCodeSchema } from './registration-codes/schema';
 
 const ip = (context: { req: { header(name: string): string | undefined } }) => context.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 const userAgent = (context: { req: { header(name: string): string | undefined } }) => context.req.header('user-agent') ?? 'unknown';
@@ -99,6 +101,11 @@ app.post('/api/attendance/scan', auth, requireRole('murid'), async (context) => 
 });
 app.get('/api/attendance/me', auth, requireRole('murid'), async (context) => context.json(await attendanceService.history(context.get('auth').id, parse(context.req.query(), historyQuerySchema, 'Parameter tidak valid'))));
 app.get('/api/attendance/me/today', auth, requireRole('murid'), (context) => context.json({ data: attendanceService.todayRecord(context.get('auth').id) }));
+
+// ===== Registration codes (GURU+ADMIN) =====
+app.get('/api/registration-codes', auth, requireAdmin, (context) => context.json({ data: codesService.list() }));
+app.post('/api/registration-codes', auth, requireAdmin, async (context) => context.json({ data: await codesService.create(context.get('auth').id, ip(context), await body(context.req.raw, createCodeSchema)) }, 201));
+app.patch('/api/registration-codes/:code', auth, requireAdmin, async (context) => context.json({ data: await codesService.update(context.get('auth').id, ip(context), parse(context.req.param('code'), codeParamSchema, 'Parameter tidak valid'), await body(context.req.raw, patchCodeSchema)) }));
 
 // ===== Reports (GURU) =====
 app.get('/api/reports/daily', auth, requireRole('guru'), (context) => context.json(reportsService.daily(parse(context.req.query(), dailyQuerySchema, 'Parameter tidak valid'))));

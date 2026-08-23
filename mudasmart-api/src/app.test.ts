@@ -404,3 +404,16 @@ test('guru can log in on a device already bound to a murid', async () => {
   const rotated = await request('/api/auth/refresh', { refreshToken: session.refreshToken, deviceId });
   expect(rotated.status).toBe(200);
 });
+
+// ===== Kode registrasi (admin) =====
+test('registration codes: admin CRUD, duplicate rejected, murid blocked', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const created = await send('POST', '/api/registration-codes', { code: 'MURID-TEST', roleAllowed: 'murid', maxUses: 5 }, bearer(admin.accessToken));
+  expect(created.status).toBe(201);
+  const code = ((await created.json()) as { data: { id: number } }).data;
+  expect((await send('POST', '/api/registration-codes', { code: 'MURID-TEST', roleAllowed: 'murid' }, bearer(admin.accessToken))).status).toBe(409);
+  expect((await send('PATCH', '/api/registration-codes/MURID-TEST', { isActive: false }, bearer(admin.accessToken))).status).toBe(200);
+  expect((await request('/api/auth/register', { email: 'blocked@example.com', password: 'password123', fullName: 'B', registrationCode: 'MURID-TEST', deviceId: crypto.randomUUID(), nis: '1' })).status).toBe(400);
+  const murid = await makeMurid();
+  expect((await app.request('/api/registration-codes', { headers: bearer(murid.accessToken) })).status).toBe(403);
+});

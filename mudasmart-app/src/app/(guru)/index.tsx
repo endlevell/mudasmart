@@ -87,6 +87,8 @@ export default function GuruDashboard() {
           <>
             <Divider />
             <PressableRow label="Kelola Gerbang" sub="QR gerbang & geofence" onPress={() => router.push('/(guru)/gerbang')} />
+            <Divider />
+            <PressableRow label="Pengaturan" sub="Jam absen & kode registrasi" onPress={() => router.push('/(guru)/pengaturan')} />
           </>
         ) : null}
       </Card>

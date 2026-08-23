@@ -24,4 +24,5 @@ export const sessionsApi = {
 
 export const configApi = {
   getAttendance: () => api.get<{ data: AttendanceConfig }>('/api/config/attendance'),
+  updateAttendance: (input: AttendanceConfig) => api.patch<{ data: AttendanceConfig }>('/api/config/attendance', input),
 };
