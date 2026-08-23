@@ -10,10 +10,11 @@ const schema = z.object({
   DATABASE_URL: z.string().default('file:./data/mudasmart.db'),
   JWT_ACCESS_SECRET: secret,
   JWT_REFRESH_SECRET: secret,
-  // Access token seumur refresh (30 hari) — rotasi tetap jalan diam-diam;
-  // pengguna tidak pernah melihat "expired" dalam pemakaian normal.
+  // Access token seumur refresh — dalam pemakaian normal TIDAK ada refresh/expired
+  // yang pernah terlihat pengguna. Rotasi tetap jalan diam-diam.
   ACCESS_TOKEN_TTL: z.string().default('30d'),
-  REFRESH_TOKEN_TTL: z.string().default('30d'),
+  // Sesinya efektif setahun pemakaian normal.
+  REFRESH_TOKEN_TTL: z.string().default('365d'),
   CORS_ORIGIN: z.string().optional(),
 });
 
