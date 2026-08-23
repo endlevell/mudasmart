@@ -10,6 +10,7 @@ import { Card } from '../../components/ui/card';
 import { colors, gradients, radius, spacing, type } from '../../constants/theme';
 import { attendanceApi } from '../../api/attendance.api';
 import { useAuthStore } from '../../store/auth-store';
+import { configureAndroidChannel, registerForPush } from '../../utils/push';
 
 const jakarta = 'Asia/Jakarta';
 const dateKey = (value: number | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: jakarta }).format(new Date(value));
@@ -125,6 +126,10 @@ export default function MuridDashboard() {
   useEffect(() => {
     void loadToday();
     void loadStats();
+    void (async () => {
+      await configureAndroidChannel();
+      await registerForPush();
+    })();
     const interval = setInterval(() => void loadToday(), 30_000);
     return () => clearInterval(interval);
   }, [loadToday, loadStats]);

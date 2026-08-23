@@ -71,6 +71,11 @@ export const authService = {
     });
     return { temporaryPassword };
   },
+  // Simpan Expo push token pada baris device milik murid.
+  registerPushToken(userId: string, token: string) {
+    const changes = repository.setPushToken(userId, token, now());
+    if (changes === 0) throw fail(404, 'Perangkat belum terdaftar');
+  },
   async refresh(input: DeviceInput & { refreshToken: string }, ip: string) {
     const stored = repository.refreshByHash.get({ tokenHash: hashToken(input.refreshToken) });
     if (!stored) throw fail(401, 'Refresh token tidak valid');

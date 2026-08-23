@@ -145,5 +145,7 @@ export const attendanceService = {
       sessionId: record.sessionId,
       status: record.status,
     });
+    const device = authRepository.deviceByUser.all({ userId: record.studentId })[0];
+    return { pushToken: device?.pushToken ?? null };
   },
 };

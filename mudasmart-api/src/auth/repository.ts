@@ -27,6 +27,10 @@ export const repository = {
   revokeToken: db.update(refreshTokens).set({ revokedAt: p('now') }).where(and(eq(refreshTokens.tokenHash, p('tokenHash')), isNull(refreshTokens.revokedAt))).prepare(),
   revokeFamily: db.update(refreshTokens).set({ revokedAt: p('now') }).where(and(eq(refreshTokens.familyId, p('familyId')), isNull(refreshTokens.revokedAt))).prepare(),
   revokeAllForUser: db.update(refreshTokens).set({ revokedAt: p('now') }).where(and(eq(refreshTokens.userId, p('userId')), isNull(refreshTokens.revokedAt))).prepare(),
+  setPushToken(userId: string, token: string, now: number) {
+    const rows = db.update(devices).set({ pushToken: token, updatedAt: now }).where(eq(devices.userId, userId)).returning({ userId: devices.userId }).all();
+    return rows.length;
+  },
   audit: db.insert(auditLogs).values({ id: p('id'), userId: p('userId'), action: p('action'), metadata: p('metadata'), ip: p('ip'), createdAt: p('now') }).prepare(),
   log(userId: string | null, action: string, ip: string, metadata?: Record<string, unknown>) { this.audit.run({ id: id(), userId, action, metadata: metadata ? JSON.stringify(metadata) : null, ip, now: Date.now() }); },
 };

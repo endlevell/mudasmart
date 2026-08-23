@@ -15,6 +15,13 @@
       "when": 1787497461775,
       "tag": "0001_sloppy_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787501001880,
+      "tag": "0002_misty_steve_rogers",
+      "breakpoints": true
     }
   ]
 }

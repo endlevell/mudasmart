@@ -30,4 +30,6 @@ export const authApi = {
   changePassword: (body: { currentPassword: string; newPassword: string }) => api.patch<null>('/api/auth/password', body),
   // Admin reset kata sandi user → sandi sementara dikembalikan sekali.
   adminResetPassword: (userId: string) => api.patch<{ temporaryPassword: string }>(`/api/users/${userId}/password`, {}),
+  // Murid mendaftarkan Expo push token pada device miliknya.
+  registerPushToken: (token: string) => api.post<{ ok: boolean }>('/api/push-token', { token }),
 };

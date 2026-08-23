@@ -25,6 +25,13 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    // OTA: perubahan JS/UI bisa di-push via `eas update` tanpa rebuild APK.
+    "updates": {
+      "url": "https://u.expo.dev/f12dde98-a605-4fa5-b76f-7c69d8b873df"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "plugins": [
       "expo-router",
       "./plugins/with-android-abis",
