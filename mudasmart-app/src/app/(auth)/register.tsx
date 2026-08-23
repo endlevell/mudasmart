@@ -2,9 +2,10 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { colors, radius, spacing, type } from '../../constants/theme';
+import { colors, radius, shadow, spacing, type } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth-store';
 import { fieldErrors, registerSchema } from '../../utils/validation';
 
@@ -40,11 +41,18 @@ export default function RegisterScreen() {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" bounces={false}>
         <LinearGradient colors={['#073D2C', '#0B6E4F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
           <View style={styles.orbOne} />
+          <View style={styles.orbTwo} />
+          <View style={styles.brandMark}>
+            <Ionicons name="person-add-outline" size={24} color={colors.textInverse} />
+          </View>
           <Text style={styles.title}>Buat Akun</Text>
           <Text style={styles.tagline}>Gunakan kode sekolah yang diberikan admin</Text>
         </LinearGradient>
 
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, shadow.floating]}>
+          <Text style={styles.sheetTitle}>Lengkapi data kamu</Text>
+          <Text style={styles.sheetSub}>Semua kolom bertanda wajib diisi dengan data yang benar.</Text>
+
           <Input label="Nama Lengkap" onChangeText={update('fullName')} value={form.fullName} error={errors.fullName} />
           <Input
             autoCapitalize="none"
@@ -68,6 +76,7 @@ export default function RegisterScreen() {
 
           {error ? (
             <View style={styles.errorBox}>
+              <Ionicons name="alert-circle" size={16} color={colors.danger} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -79,8 +88,10 @@ export default function RegisterScreen() {
             pending={pending}
           />
 
-          <Link href="/(auth)/login" style={styles.link}>
-            Sudah punya akun? <Text style={styles.linkStrong}>Masuk</Text>
+          <Link href="/(auth)/login" asChild>
+            <Text style={styles.link}>
+              Sudah punya akun? <Text style={styles.linkStrong}>Masuk</Text>
+            </Text>
           </Link>
         </View>
       </ScrollView>
@@ -95,9 +106,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
-    paddingBottom: spacing.xl + 32,
-    paddingTop: spacing.xxl + 16,
     overflow: 'hidden',
+    paddingBottom: spacing.xl + 40,
+    paddingTop: spacing.xxl,
   },
   orbOne: {
     backgroundColor: 'rgba(111,203,163,0.18)',
@@ -108,17 +119,40 @@ const styles = StyleSheet.create({
     top: -60,
     width: 200,
   },
+  orbTwo: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 999,
+    height: 140,
+    position: 'absolute',
+    right: -46,
+    bottom: -30,
+    width: 140,
+  },
+  brandMark: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.35)',
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    height: 54,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+    width: 54,
+  },
   title: { ...type.display, color: colors.textInverse },
   tagline: { ...type.body, color: 'rgba(255,255,255,0.8)', marginTop: spacing.xs },
   sheet: {
-    backgroundColor: colors.backgroundAlt,
+    backgroundColor: colors.background,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
+    marginHorizontal: spacing.sm,
     marginTop: -radius.xl,
     padding: spacing.xl,
   },
-  errorBox: { backgroundColor: colors.dangerBg, borderRadius: radius.md, marginBottom: spacing.md, padding: spacing.md },
-  errorText: { color: colors.danger, fontSize: type.caption.fontSize + 1, fontWeight: '600' },
+  sheetTitle: { ...type.title, color: colors.textPrimary },
+  sheetSub: { ...type.body, color: colors.textSecondary, marginBottom: spacing.lg, marginTop: spacing.xs },
+  errorBox: { alignItems: 'center', backgroundColor: colors.dangerBg, borderRadius: radius.md, flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md },
+  errorText: { color: colors.danger, flex: 1, fontSize: type.caption.fontSize + 1, fontWeight: '600' },
   link: { alignSelf: 'stretch', color: colors.textSecondary, marginTop: spacing.lg, textAlign: 'center' },
   linkStrong: { color: colors.primary700, fontWeight: '700' },
 });
