@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { authApi, type LoginInput, type RegisterInput } from '@/api/auth.api';
-import { configureClient } from '@/api/client';
+import { clearClientTokens, configureClient, getClientTokens, setClientTokens } from '@/api/client';
 import type { AuthResponse, User } from '@/api/types';
 import { clearCredentials, clearSession, getOrCreateDeviceId, loadSession, saveCredentials, saveSession } from '@/utils/secure-storage';
 
@@ -34,18 +34,23 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => {
   // Client tidak mengimpor store (hindari siklus impor); store yang memasang handler.
   const wire = () =>
     configureClient({
-      getTokens: () => get().session ?? {},
-      setTokens: (tokens) =>
-        set((state) => {
-          if (!state.session) return {};
-          return {
-            session: {
-              ...state.session,
-              accessToken: tokens.accessToken ?? state.session.accessToken,
-              refreshToken: tokens.refreshToken ?? state.session.refreshToken,
-            },
-          };
-        }),
+      getTokens: () => {
+        const memory = getClientTokens();
+        const state = get().session;
+        return {
+          accessToken: memory.accessToken ?? state?.accessToken,
+          refreshToken: memory.refreshToken ?? state?.refreshToken,
+        };
+      },
+      // Rotasi refresh token WAJIB dipersist ke SecureStore — kalau hanya di
+      // memori, sesi mati setiap kali app ditutup (akar bug logout paksa).
+      onTokensRotated: (data: AuthResponse) => {
+        const state = get();
+        if (!state.session) return;
+        const next = { ...state.session, accessToken: data.accessToken, refreshToken: data.refreshToken };
+        void saveSession(next);
+        set({ session: next });
+      },
       onSessionExpired: () => get().expire(),
     });
 
@@ -78,7 +83,10 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => {
     hydrate: async () => {
       const stored = await loadSession();
       set({ session: stored as Session | null, hydrated: true });
-      if (stored) wire();
+      if (stored) {
+        setClientTokens({ accessToken: stored.accessToken, refreshToken: stored.refreshToken });
+        wire();
+      }
     },
 
     login: (input) => runAuth((deviceId) => authApi.login({ ...input, deviceId }), { email: input.email, password: input.password }),
@@ -93,6 +101,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => {
           // Logout server gagal — tetap bersihkan sesi lokal.
         }
       }
+      clearClientTokens();
       await clearSession();
       await clearCredentials();
       set({ session: null, error: null });

@@ -11,18 +11,30 @@ interface Tokens {
   refreshToken?: string | null;
 }
 
+// Lapisan token tercepat — hasil rotasi refresh SELALU ditulis di sini dulu,
+// lalu disinkronkan ke store (zustand + SecureStore) lewat onTokensRotated.
+let memoryTokens: Tokens | null = null;
+
+export const getClientTokens = (): Tokens => memoryTokens ?? {};
+export const setClientTokens = (tokens: Tokens) => {
+  memoryTokens = { ...(memoryTokens ?? {}), ...tokens };
+};
+export const clearClientTokens = () => {
+  memoryTokens = null;
+};
+
 let getTokens: () => Tokens = () => ({});
-let setTokens: (tokens: Tokens) => void = () => {};
+let onTokensRotated: (data: AuthResponse) => void = () => {};
 let onSessionExpired: () => void = () => {};
 
 // Dipasang oleh auth-store agar client tidak mengimpor store (hindari siklus impor).
 export const configureClient = (handlers: {
   getTokens: () => Tokens;
-  setTokens: (tokens: Tokens) => void;
+  onTokensRotated: (data: AuthResponse) => void;
   onSessionExpired: () => void;
 }) => {
   getTokens = handlers.getTokens;
-  setTokens = handlers.setTokens;
+  onTokensRotated = handlers.onTokensRotated;
   onSessionExpired = handlers.onSessionExpired;
 };
 
@@ -48,8 +60,8 @@ async function request<T>(path: string, init: RequestInit, auth: boolean, retrie
   // Refresh sekali pada 401 untuk endpoint berauth; endpoint auth tidak di-retry.
   if (response.status === 401 && auth && !retried && !path.startsWith('/api/auth/')) {
     let recovered = await tryRefresh(tokens.refreshToken ?? null);
-    // Refresh gagal (token dicabut/di-reset) → coba login ulang diam-diam
-    // memakai kredensial tersimpan. Pengguna tidak pernah disodori halaman login.
+    // Refresh gagal (token dicabut/di-reset) → login ulang diam-diam memakai
+    // kredensial tersimpan. Pengguna tidak pernah disodori halaman login.
     if (!recovered) recovered = await tryRelogin();
     if (recovered) return request<T>(path, init, auth, true);
     console.warn('[auth] refresh & relogin gagal, sesi diakhiri:', path);
@@ -97,7 +109,7 @@ async function tryRelogin(): Promise<boolean> {
     });
     if (!response.ok) return false;
     const data = (await response.json()) as AuthResponse;
-    setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+    adoptTokens(data);
     return true;
   } catch {
     return false;
@@ -114,11 +126,19 @@ async function doRefresh(refreshToken: string): Promise<boolean> {
     });
     if (!response.ok) return false;
     const data = (await response.json()) as AuthResponse;
-    setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+    adoptTokens(data);
     return true;
   } catch {
     return false;
   }
+}
+
+// Token hasil rotasi dipakai seketika + diteruskan ke store untuk dipersist
+// ke SecureStore. INI YANG DULU HILANG: token baru cuma di memori, sehingga
+// setelah keluar app sesi selalu mati.
+function adoptTokens(data: AuthResponse) {
+  setClientTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+  onTokensRotated(data);
 }
 
 // Default auth=true — hampir semua endpoint wajib token. Endpoint publik (register/login/refresh)
