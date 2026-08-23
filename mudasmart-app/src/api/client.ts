@@ -60,8 +60,22 @@ async function request<T>(path: string, init: RequestInit, auth: boolean, retrie
   return data as T;
 }
 
+// Single-flight refresh: banyak request bisa 401 bersamaan; SEMUA menunggu satu
+// proses refresh yang sama. Tanpa ini, refresh paralel memicu deteksi reuse di
+// server → seluruh family dicabut → user dipaksa logout tiap buka ulang app.
+let refreshInFlight: Promise<boolean> | null = null;
+
 async function tryRefresh(refreshToken: string | null): Promise<boolean> {
   if (!refreshToken) return false;
+  if (!refreshInFlight) {
+    refreshInFlight = doRefresh(refreshToken).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+async function doRefresh(refreshToken: string): Promise<boolean> {
   try {
     const deviceId = await getOrCreateDeviceId();
     const response = await fetch(`${BASE_URL}/api/auth/refresh`, {
