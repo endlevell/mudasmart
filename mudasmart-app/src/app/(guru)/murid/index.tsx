@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   },
   search: { color: colors.textPrimary, flex: 1, fontSize: type.body.fontSize, paddingVertical: 14 },
   searchClear: { padding: 2 },
-  importButton: { alignItems: 'center', backgroundColor: colors.primary100, borderRadius: radius.md, justifyContent: 'center', paddingHorizontal: spacing.md },
+  importButton: { alignSelf: 'stretch', alignItems: 'center', backgroundColor: colors.primary100, borderRadius: radius.md, justifyContent: 'center', paddingHorizontal: spacing.md },
   importText: { fontSize: 11, fontWeight: '800', color: colors.primary700 },
   count: { ...type.caption, color: colors.textSecondary, marginBottom: spacing.sm },
   error: { color: colors.danger, fontSize: type.caption.fontSize, marginBottom: spacing.sm },
