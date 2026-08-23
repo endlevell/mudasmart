@@ -40,7 +40,8 @@ export const authService = {
   async login(input: Login, ip: string) {
     const found = repository.userByEmail.get({ email: input.email });
     if (!found || !found.isActive || !(await verifyPassword(found.passwordHash, input.password))) { repository.log(found?.id ?? null, 'login_failed', ip); throw fail(401, 'Email atau kata sandi salah'); }
-    const user: User = found; const refreshToken = newToken();
+    // Jangan pernah bawa passwordHash keluar dari service.
+    const { passwordHash: _hash, ...user } = found; const refreshToken = newToken();
     db.transaction(() => { const deviceId = deviceFor(user, input, ip); issue(user.id, deviceId, refreshToken); repository.log(user.id, 'login', ip, { deviceId: input.deviceId, userAgent: input.userAgent }); });
     return output(user, refreshToken);
   },
