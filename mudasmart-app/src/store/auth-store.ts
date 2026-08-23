@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { authApi, type LoginInput, type RegisterInput } from '@/api/auth.api';
 import { configureClient } from '@/api/client';
 import type { AuthResponse, User } from '@/api/types';
-import { clearSession, getOrCreateDeviceId, loadSession, saveSession } from '@/utils/secure-storage';
+import { clearCredentials, clearSession, getOrCreateDeviceId, loadSession, saveCredentials, saveSession } from '@/utils/secure-storage';
 
 interface Session {
   user: User;
@@ -49,11 +49,16 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => {
       onSessionExpired: () => get().expire(),
     });
 
-  const runAuth = async (action: (deviceId: string) => Promise<AuthResponse>) => {
+  const runAuth = async (
+    action: (deviceId: string) => Promise<AuthResponse>,
+    credentials?: { email: string; password: string },
+  ) => {
     set({ pending: true, error: null });
     try {
       const deviceId = await getOrCreateDeviceId();
       const session = await persist(await action(deviceId));
+      // Kredensial disimpan untuk auto-relogin — kunci sesi permanen.
+      if (credentials) await saveCredentials(credentials.email, credentials.password);
       set({ session });
       wire();
     } catch (error) {
@@ -76,8 +81,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => {
       if (stored) wire();
     },
 
-    login: (input) => runAuth((deviceId) => authApi.login({ ...input, deviceId })),
-    register: (input) => runAuth((deviceId) => authApi.register({ ...input, deviceId })),
+    login: (input) => runAuth((deviceId) => authApi.login({ ...input, deviceId }), { email: input.email, password: input.password }),
+    register: (input) => runAuth((deviceId) => authApi.register({ ...input, deviceId }), { email: input.email, password: input.password }),
 
     logout: async () => {
       const { session } = get();
@@ -89,6 +94,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => {
         }
       }
       await clearSession();
+      await clearCredentials();
       set({ session: null, error: null });
     },
 

@@ -6,6 +6,7 @@ import { Input } from './input';
 import { toast } from './toast';
 import { colors, radius, shadow, spacing, type } from '../../constants/theme';
 import { authApi } from '../../api/auth.api';
+import { clearCredentials } from '../../utils/secure-storage';
 import { useAuthStore } from '../../store/auth-store';
 
 // Bottom-sheet ganti kata sandi — desain senada dengan modal ajukan izin.
@@ -35,6 +36,9 @@ export function ChangePasswordModal({ visible, onClose }: { visible: boolean; on
     setSubmitting(true);
     try {
       await authApi.changePassword({ currentPassword: current, newPassword: next });
+      // Kredensial tersimpan tidak berlaku lagi — buang agar auto-relogin tidak
+      // memakai sandi lama; disimpan ulang otomatis saat login berikutnya.
+      await clearCredentials();
       toast.show({ tone: 'success', title: 'Kata sandi diganti', message: 'Silakan masuk kembali dengan kata sandi baru.' });
       onClose();
       setTimeout(() => void logout(), 600);

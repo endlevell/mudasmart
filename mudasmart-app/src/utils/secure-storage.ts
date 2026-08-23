@@ -6,7 +6,32 @@ const KEYS = {
   user: 'mudas.user',
   deviceId: 'mudas.deviceId',
   onboardingSeen: 'mudas.onboardingSeen',
+  credEmail: 'mudas.credEmail',
+  credPassword: 'mudas.credPassword',
 } as const;
+
+// Kredensial untuk auto-relogin — disimpan terenkripsi (Keychain/Keystore).
+// Tujuannya: sesi permanen dari sudut pandang pengguna; bila token mati karena
+// alasan apa pun, app login ulang diam-diam tanpa menampilkan halaman login.
+export const saveCredentials = async (email: string, password: string) => {
+  await Promise.all([
+    SecureStore.setItemAsync(KEYS.credEmail, email),
+    SecureStore.setItemAsync(KEYS.credPassword, password),
+  ]);
+};
+
+export const getStoredCredentials = async (): Promise<{ email: string; password: string } | null> => {
+  const [email, password] = await Promise.all([
+    SecureStore.getItemAsync(KEYS.credEmail),
+    SecureStore.getItemAsync(KEYS.credPassword),
+  ]);
+  if (!email || !password) return null;
+  return { email, password };
+};
+
+export const clearCredentials = async () => {
+  await Promise.all([SecureStore.deleteItemAsync(KEYS.credEmail), SecureStore.deleteItemAsync(KEYS.credPassword)]);
+};
 
 // Satu sumber kebenaran untuk flag onboarding. Cache diisi sekali saat boot (prime),
 // lalu dibaca sinkron oleh gate di root layout agar tidak ada race saat navigasi.

@@ -1,4 +1,4 @@
-import { getOrCreateDeviceId } from '@/utils/secure-storage';
+import { getOrCreateDeviceId, getStoredCredentials } from '@/utils/secure-storage';
 import type { AuthResponse } from './types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -47,12 +47,15 @@ async function request<T>(path: string, init: RequestInit, auth: boolean, retrie
 
   // Refresh sekali pada 401 untuk endpoint berauth; endpoint auth tidak di-retry.
   if (response.status === 401 && auth && !retried && !path.startsWith('/api/auth/')) {
-    const refreshed = await tryRefresh(tokens.refreshToken ?? null);
-    if (refreshed) return request<T>(path, init, auth, true);
-    // Diagnostik: terlihat di logcat (ReactNativeJS) bila sesi benar-benar kedaluwarsa.
-    console.warn('[auth] refresh gagal, sesi diakhiri:', path);
+    let recovered = await tryRefresh(tokens.refreshToken ?? null);
+    // Refresh gagal (token dicabut/di-reset) → coba login ulang diam-diam
+    // memakai kredensial tersimpan. Pengguna tidak pernah disodori halaman login.
+    if (!recovered) recovered = await tryRelogin();
+    if (recovered) return request<T>(path, init, auth, true);
+    console.warn('[auth] refresh & relogin gagal, sesi diakhiri:', path);
     onSessionExpired();
   }
+  if (response.ok) reloginAttempted = false;
 
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
@@ -66,6 +69,9 @@ async function request<T>(path: string, init: RequestInit, auth: boolean, retrie
 // proses refresh yang sama. Tanpa ini, refresh paralel memicu deteksi reuse di
 // server → seluruh family dicabut → user dipaksa logout tiap buka ulang app.
 let refreshInFlight: Promise<boolean> | null = null;
+// Auto-relogin hanya dicoba sekali per "kegagalan sesi"; flag reset saat ada
+// request yang sukses (tanda sesi sehat kembali).
+let reloginAttempted = false;
 
 async function tryRefresh(refreshToken: string | null): Promise<boolean> {
   if (!refreshToken) return false;
@@ -75,6 +81,27 @@ async function tryRefresh(refreshToken: string | null): Promise<boolean> {
     });
   }
   return refreshInFlight;
+}
+
+async function tryRelogin(): Promise<boolean> {
+  if (reloginAttempted) return false;
+  reloginAttempted = true;
+  try {
+    const credentials = await getStoredCredentials();
+    if (!credentials) return false;
+    const deviceId = await getOrCreateDeviceId();
+    const response = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...credentials, deviceId, platform: String(process.env.EXPO_OS ?? 'android'), model: 'unknown' }),
+    });
+    if (!response.ok) return false;
+    const data = (await response.json()) as AuthResponse;
+    setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function doRefresh(refreshToken: string): Promise<boolean> {
