@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 import { authApi } from '../api/auth.api';
 
@@ -11,6 +11,9 @@ Notifications.setNotificationHandler({
 /** Minta izin, ambil Expo push token, dan daftarkan ke server (murid). */
 export async function registerForPush(): Promise<void> {
   try {
+    // Remote push sudah tidak ada di Expo Go (SDK 53+) — hanya build asli.
+    if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return;
+
     const settings = await Notifications.getPermissionsAsync();
     let granted = settings.granted;
     if (!granted) {
