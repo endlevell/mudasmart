@@ -44,6 +44,33 @@ export const authService = {
     db.transaction(() => { const deviceId = deviceFor(user, input, ip); issue(user.id, deviceId, refreshToken); repository.log(user.id, 'login', ip, { deviceId: input.deviceId, userAgent: input.userAgent }); });
     return output(user, refreshToken);
   },
+  // Ganti kata sandi sendiri — verifikasi sandi lama, lalu cabut semua sesi refresh
+  // agar perangkat lain harus login ulang.
+  async changePassword(userId: string, ip: string, input: { currentPassword: string; newPassword: string }) {
+    const found = repository.userWithHashById.get({ id: userId });
+    if (!found || !(await verifyPassword(found.passwordHash, input.currentPassword))) throw fail(400, 'Kata sandi saat ini salah');
+    const passwordHash = await hashPassword(input.newPassword);
+    db.transaction(() => {
+      repository.updatePassword.run({ id: userId, passwordHash, now: now() });
+      repository.revokeAllForUser.run({ userId, now: now() });
+      repository.log(userId, 'password_changed', ip);
+    });
+  },
+  // Admin mereset kata sandi user mana pun (kecuali dirinya) → menghasilkan sandi sementara
+  // yang ditampilkan sekali; semua sesi target dicabut.
+  async adminResetPassword(actorId: string, ip: string, targetId: string) {
+    if (targetId === actorId) throw fail(400, 'Gunakan ganti kata sandi untuk akun sendiri');
+    const target = repository.userById.get({ id: targetId });
+    if (!target) throw fail(404, 'User tidak ditemukan');
+    const temporaryPassword = `Muda-${newToken().slice(0, 8)}`;
+    const passwordHash = await hashPassword(temporaryPassword);
+    db.transaction(() => {
+      repository.updatePassword.run({ id: targetId, passwordHash, now: now() });
+      repository.revokeAllForUser.run({ userId: targetId, now: now() });
+      repository.log(actorId, 'password_reset_by_admin', ip, { targetId });
+    });
+    return { temporaryPassword };
+  },
   async refresh(input: DeviceInput & { refreshToken: string }, ip: string) {
     const stored = repository.refreshByHash.get({ tokenHash: hashToken(input.refreshToken) });
     if (!stored) throw fail(401, 'Refresh token tidak valid');

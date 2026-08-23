@@ -4,11 +4,11 @@ import { secureHeaders } from 'hono/secure-headers';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import './db/migrate';
 import { auth, requireAdmin, requireRole } from './middleware/auth';
-import { consumeLogin, consumeRefresh, consumeRegister, consumeScan, consumeLeave, failLogin, resetLogin } from './middleware/rate-limit';
+import { consumeLogin, consumeRefresh, consumeRegister, consumeScan, failLogin, resetLogin } from './middleware/rate-limit';
 import { logger } from './lib/logger';
 import { env } from './config/env';
 import { authService } from './auth/service';
-import { loginSchema, logoutSchema, refreshSchema, registerSchema } from './auth/schema';
+import { changePasswordSchema, loginSchema, logoutSchema, refreshSchema, registerSchema } from './auth/schema';
 import { studentsService } from './students/service';
 import { idParamSchema, listStudentsQuerySchema, patchStudentSchema } from './students/schema';
 import { classesService } from './classes/service';
@@ -71,6 +71,20 @@ app.post('/api/auth/login', async (context) => { const clientIp = ip(context); i
 app.post('/api/auth/refresh', async (context) => { if (!(await consumeRefresh(ip(context)))) return context.json({ error: 'Terlalu banyak percobaan' }, 429); return context.json(await authService.refresh({ ...await body(context.req.raw, refreshSchema), userAgent: userAgent(context) }, ip(context))); });
 app.post('/api/auth/logout', auth, async (context) => { authService.logout(context.get('auth').id, (await body(context.req.raw, logoutSchema)).refreshToken, ip(context)); return context.body(null, 204); });
 app.get('/api/auth/me', auth, (context) => context.json({ user: context.get('auth') }));
+// Ganti kata sandi sendiri — semua sesi refresh dicabut setelahnya.
+app.patch('/api/auth/password', auth, async (context) => {
+  await authService.changePassword(context.get('auth').id, ip(context), await body(context.req.raw, changePasswordSchema));
+  return context.body(null, 204);
+});
+// Admin mereset kata sandi user (murid/guru) → sandi sementara dikembalikan sekali.
+app.patch('/api/users/:id/password', auth, requireAdmin, async (context) => {
+  const result = await authService.adminResetPassword(
+    context.get('auth').id,
+    ip(context),
+    parse(context.req.param('id'), idParamSchema, 'Parameter tidak valid'),
+  );
+  return context.json(result);
+});
 
 // ===== Students (GURU; deactivate admin) =====
 app.get('/api/students', auth, requireRole('guru'), async (context) => context.json(await studentsService.list(parse(context.req.query(), listStudentsQuerySchema, 'Parameter tidak valid'))));
@@ -137,7 +151,7 @@ app.post('/api/leave-requests', auth, async (context) => {
   if (file && typeof file === 'object' && 'arrayBuffer' in file) {
     image = { mimeType: file.type, bytes: new Uint8Array(await (file as File).arrayBuffer()) };
   }
-  return context.json(await leavesService.create(context.get('auth'), ip(context), input, image), 201);
+  return context.json(await leavesService.create({ ...context.get('auth'), isAdmin: context.get('auth').isAdmin === true }, ip(context), input, image), 201);
 });
 app.get('/api/leave-requests/me', auth, requireRole('murid'), (context) => context.json({ data: leavesService.mine(context.get('auth').id) }));
 app.get('/api/leave-requests', auth, requireRole('guru'), (context) => context.json({ data: leavesService.list(parse(context.req.query(), listLeavesQuerySchema, 'Parameter tidak valid').status) }));

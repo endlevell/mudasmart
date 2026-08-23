@@ -26,4 +26,8 @@ export const authApi = {
     api.post<AuthResponse>('/api/auth/login', { ...input, platform: platform(), model: 'unknown' }, false),
   logout: (refreshToken: string) => api.post<void>('/api/auth/logout', { refreshToken }, true),
   me: () => api.get<{ user: User }>('/api/auth/me'),
+  // Ganti kata sandi sendiri — sesi refresh lain dicabut server.
+  changePassword: (body: { currentPassword: string; newPassword: string }) => api.patch<null>('/api/auth/password', body),
+  // Admin reset kata sandi user → sandi sementara dikembalikan sekali.
+  adminResetPassword: (userId: string) => api.patch<{ temporaryPassword: string }>(`/api/users/${userId}/password`, {}),
 };

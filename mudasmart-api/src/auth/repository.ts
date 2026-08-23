@@ -9,6 +9,8 @@ const usableCode = and(eq(registrationCodes.code, p('code')), eq(registrationCod
 export const repository = {
   code: db.select().from(registrationCodes).where(usableCode).prepare(),
   userByEmail: db.select({ ...userFields, passwordHash: users.passwordHash }).from(users).leftJoin(teacherProfiles, eq(teacherProfiles.userId, users.id)).where(eq(users.email, p('email'))).prepare(),
+  userWithHashById: db.select({ id: users.id, passwordHash: users.passwordHash }).from(users).where(eq(users.id, p('id'))).prepare(),
+  updatePassword: db.update(users).set({ passwordHash: p('passwordHash'), updatedAt: p('now') }).where(eq(users.id, p('id'))).prepare(),
   userById: db.select(userFields).from(users).leftJoin(teacherProfiles, eq(teacherProfiles.userId, users.id)).where(eq(users.id, p('id'))).prepare(),
   activeUserById: db.select(userFields).from(users).leftJoin(teacherProfiles, eq(teacherProfiles.userId, users.id)).where(and(eq(users.id, p('id')), eq(users.isActive, true))).prepare(),
   deviceByUser: db.select().from(devices).where(eq(devices.userId, p('userId'))).prepare(),

@@ -9,6 +9,7 @@ import { Select } from '../../../components/ui/select';
 import { colors, spacing, type } from '../../../constants/theme';
 import { classesApi, type ClassRoom } from '../../../api/classes.api';
 import { studentsApi, type DeviceInfo, type Student } from '../../../api/students.api';
+import { authApi } from '../../../api/auth.api';
 import { useAuthStore } from '../../../store/auth-store';
 
 export default function DetailMuridScreen() {
@@ -104,6 +105,25 @@ export default function DetailMuridScreen() {
     ]);
   };
 
+  const confirmResetPassword = () => {
+    Alert.alert('Reset Kata Sandi', `Kata sandi ${student?.fullName} akan diganti dengan sandi sementara baru.`, [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Reset',
+        onPress: () => {
+          void (async () => {
+            try {
+              const { temporaryPassword } = await authApi.adminResetPassword(id!);
+              Alert.alert('Kata Sandi Sementara', `Bagikan kepada murid:\n\n${temporaryPassword}\n\nSandi ini hanya ditampilkan sekali.`);
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Gagal reset kata sandi');
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
   if (!student) {
     return (
       <View style={styles.container}>
@@ -155,7 +175,12 @@ export default function DetailMuridScreen() {
         <Button label="Simpan Perubahan" onPress={save} pending={pending} />
       </Card>
 
-      {isAdmin ? <Button label="Nonaktifkan Murid" onPress={confirmDeactivate} variant="danger-outline" /> : null}
+      {isAdmin ? (
+        <>
+          <Button label="Reset Kata Sandi" onPress={confirmResetPassword} variant="ghost" />
+          <Button label="Nonaktifkan Murid" onPress={confirmDeactivate} variant="danger-outline" />
+        </>
+      ) : null}
     </ScrollView>
   );
 }

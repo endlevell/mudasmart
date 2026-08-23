@@ -9,6 +9,7 @@ import { PressableScale } from '../../components/ui/pressable-scale';
 import { ScreenHeader } from '../../components/ui/screen-header';
 import { colors, gradients, radius, shadow, spacing, type } from '../../constants/theme';
 import { gurusApi, type GuruRow } from '../../api/gurus.api';
+import { authApi } from '../../api/auth.api';
 import { useAuthStore } from '../../store/auth-store';
 
 const initials = (fullName: string) =>
@@ -123,6 +124,25 @@ export default function KelolaGuruScreen() {
     );
   };
 
+  const confirmResetPassword = (guru: GuruRow) => {
+    Alert.alert('Reset Kata Sandi', `Kata sandi ${guru.fullName} akan diganti dengan sandi sementara baru.`, [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Reset',
+        onPress: () => {
+          void (async () => {
+            try {
+              const { temporaryPassword } = await authApi.adminResetPassword(guru.id);
+              Alert.alert('Kata Sandi Sementara', `Bagikan kepada ${guru.fullName}:\n\n${temporaryPassword}\n\nSandi ini hanya ditampilkan sekali.`);
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Gagal reset kata sandi');
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
   const confirmDeactivate = (guru: GuruRow) => {
     Alert.alert('Nonaktifkan Guru', `${guru.fullName} tidak akan bisa login lagi.`, [
       { text: 'Batal', style: 'cancel' },
@@ -197,6 +217,7 @@ export default function KelolaGuruScreen() {
                       tone={guru.isAdmin ? 'neutral' : 'info'}
                       onPress={() => confirmToggleAdmin(guru)}
                     />
+                    <PillAction label="Reset Sandi" tone="neutral" onPress={() => confirmResetPassword(guru)} />
                     <PillAction label="Nonaktifkan" tone="danger" onPress={() => confirmDeactivate(guru)} />
                   </View>
                 </>

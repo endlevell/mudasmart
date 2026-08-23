@@ -8,3 +8,4 @@ export const registerSchema = z.object({ email, password, fullName: z.string().t
 export const loginSchema = z.object({ email, password, deviceId, platform: z.string().trim().max(64).optional(), model: z.string().trim().max(128).optional() }).strict();
 export const refreshSchema = z.object({ refreshToken: z.string().min(43).max(512), deviceId }).strict();
 export const logoutSchema = z.object({ refreshToken: z.string().min(43).max(512) }).strict();
+export const changePasswordSchema = z.object({ currentPassword: z.string().min(1).max(128), newPassword: password }).strict();

@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { ChangePasswordModal } from '../../components/ui/change-password-modal';
 import { PressableScale } from '../../components/ui/pressable-scale';
 import { colors, radius, spacing, type } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth-store';
@@ -22,6 +24,7 @@ const initialsOf = (fullName: string) =>
 // Profil guru — identitas, detail akun, dan menu per role.
 export default function GuruProfilScreen() {
   const insets = useSafeAreaInsets();
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const { session: auth, logout } = useAuthStore();
   const user = auth?.user;
   const isAdmin = !!user?.isAdmin;
@@ -80,6 +83,12 @@ export default function GuruProfilScreen() {
                   />
                 </>
               ) : null}
+              <MenuItem
+                icon="lock-closed-outline"
+                label="Ubah Kata Sandi"
+                sub="Ganti kata sandi akun"
+                onPress={() => setPasswordOpen(true)}
+              />
             </View>
           </Card>
         </Animated.View>
@@ -90,6 +99,8 @@ export default function GuruProfilScreen() {
 
         <Text style={styles.version}>MUDASmart · Aplikasi Absensi QR</Text>
       </View>
+
+      <ChangePasswordModal onClose={() => setPasswordOpen(false)} visible={passwordOpen} />
     </ScrollView>
   );
 }
