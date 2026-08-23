@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
@@ -9,6 +10,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, radius, spacing, type } from '../../constants/theme';
 import { ScreenHeader } from '../../components/ui/screen-header';
 import { classesApi, type ClassRoom } from '../../api/classes.api';
+import { attendanceApi } from '../../api/attendance.api';
 import { reportsApi, type DailyReport, type MonthlyReport } from '../../api/reports.api';
 import { useAuthStore } from '../../store/auth-store';
 
@@ -107,6 +109,31 @@ export default function RekapScreen() {
     } finally {
       setPending(false);
     }
+  };
+
+  const confirmCancel = (student: { fullName: string; recordId: number | null }) => {
+    if (student.recordId == null) return;
+    Alert.alert(
+      'Batalkan Absensi',
+      `Absensi ${student.fullName} akan dihapus. Murid bisa scan ulang setelah dibatalkan.`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Batalkan Absensi',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                await attendanceApi.cancelRecord(student.recordId!);
+                await load();
+              } catch (e) {
+                setError(e instanceof Error ? e.message : 'Gagal membatalkan absensi');
+              }
+            })();
+          },
+        },
+      ],
+    );
   };
 
   // Ringkasan harian dari data kelas yang sudah dimuat.
@@ -214,7 +241,14 @@ export default function RekapScreen() {
                             <Text style={styles.name}>{student.fullName}</Text>
                             <Text style={styles.meta}>NIS {student.nis}</Text>
                           </View>
-                          <Badge label={badge.label} tone={badge.tone} />
+                          <View style={styles.rowActions}>
+                            <Badge label={badge.label} tone={badge.tone} />
+                            {student.recordId != null ? (
+                              <Pressable hitSlop={8} onPress={() => confirmCancel(student)} style={styles.cancelBtn}>
+                                <Ionicons name="close-circle-outline" size={20} color={colors.danger} />
+                              </Pressable>
+                            ) : null}
+                          </View>
                         </View>
                       );
                     })}
@@ -287,6 +321,8 @@ const styles = StyleSheet.create({
   classHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   classCount: { ...type.caption, fontWeight: '600', color: colors.textSecondary },
   row: { alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row' },
+  rowActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  cancelBtn: { alignItems: 'center', justifyContent: 'center', padding: 2 },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   nameShrink: { flexShrink: 1 },
   meta: { ...type.caption, color: colors.textSecondary },

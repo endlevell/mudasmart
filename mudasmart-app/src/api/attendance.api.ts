@@ -25,4 +25,6 @@ export const attendanceApi = {
       true,
     ),
   today: () => api.get<{ data: { status: 'hadir' | 'telat'; scannedAt: number } | null }>('/api/attendance/me/today', true),
+  // Guru/admin membatalkan absensi murid — record dihapus agar murid bisa scan ulang.
+  cancelRecord: (recordId: number) => api.del<null>(`/api/attendance/records/${recordId}`, true),
 };

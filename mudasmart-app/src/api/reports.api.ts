@@ -9,7 +9,7 @@ export interface DailyReport {
   classes: {
     classId: number | null;
     className: string;
-    students: { id: string; nis: string; fullName: string; status: 'hadir' | 'telat' | 'tidak hadir' | null; scannedAt: number | null }[];
+    students: { id: string; nis: string; fullName: string; status: 'hadir' | 'telat' | 'tidak hadir' | null; scannedAt: number | null; recordId: number | null }[];
   }[];
 }
 
