@@ -21,9 +21,9 @@ const platform = () => String(process.env.EXPO_OS ?? 'android');
 
 export const authApi = {
   register: (input: RegisterInput) =>
-    api.post<AuthResponse>('/api/auth/register', { ...input, platform: platform(), model: 'unknown' }),
+    api.post<AuthResponse>('/api/auth/register', { ...input, platform: platform(), model: 'unknown' }, false),
   login: (input: LoginInput) =>
-    api.post<AuthResponse>('/api/auth/login', { ...input, platform: platform(), model: 'unknown' }),
+    api.post<AuthResponse>('/api/auth/login', { ...input, platform: platform(), model: 'unknown' }, false),
   logout: (refreshToken: string) => api.post<void>('/api/auth/logout', { refreshToken }, true),
   me: () => api.get<{ user: User }>('/api/auth/me'),
 };

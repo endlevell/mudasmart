@@ -76,9 +76,11 @@ async function tryRefresh(refreshToken: string | null): Promise<boolean> {
   }
 }
 
+// Default auth=true — hampir semua endpoint wajib token. Endpoint publik (register/login/refresh)
+// secara eksplisit memakai auth=false.
 export const api = {
-  get: <T>(path: string, auth = false) => request<T>(path, { method: 'GET' }, auth, false),
-  post: <T>(path: string, body: unknown, auth = false) =>
+  get: <T>(path: string, auth = true) => request<T>(path, { method: 'GET' }, auth, false),
+  post: <T>(path: string, body: unknown, auth = true) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }, auth, false),
   patch: <T>(path: string, body: unknown, auth = true) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }, auth, false),
