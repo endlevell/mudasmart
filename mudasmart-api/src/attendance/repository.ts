@@ -9,6 +9,12 @@ export const attendanceRepository = {
   recordByStudent(sessionId: number, studentId: string) {
     return db.select().from(attendanceRecords).where(and(eq(attendanceRecords.sessionId, sessionId), eq(attendanceRecords.studentId, studentId))).get();
   },
+  byId(recordId: number) {
+    return db.select().from(attendanceRecords).where(eq(attendanceRecords.id, recordId)).get();
+  },
+  deleteById(recordId: number) {
+    db.delete(attendanceRecords).where(eq(attendanceRecords.id, recordId)).run();
+  },
   todayRecord(studentId: string, date: string) {
     return db
       .select({ status: attendanceRecords.status, scannedAt: attendanceRecords.scannedAt })

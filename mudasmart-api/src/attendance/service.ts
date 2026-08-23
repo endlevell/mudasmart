@@ -123,4 +123,18 @@ export const attendanceService = {
   todayRecord(studentId: string) {
     return attendanceRepository.todayRecord(studentId, todayWib()) ?? null;
   },
+
+  // Guru/admin membatalkan absensi: record dihapus sehingga murid bisa scan ulang
+  // (UNIQUE(session_id, student_id) kembali bebas). Selalu diaudit.
+  cancelRecord(actorId: string, ip: string, recordId: number) {
+    const record = attendanceRepository.byId(recordId);
+    if (!record) throw fail(404, 'Catatan absensi tidak ditemukan');
+    attendanceRepository.deleteById(recordId);
+    authRepository.log(actorId, 'attendance_cancelled', ip, {
+      recordId,
+      studentId: record.studentId,
+      sessionId: record.sessionId,
+      status: record.status,
+    });
+  },
 };

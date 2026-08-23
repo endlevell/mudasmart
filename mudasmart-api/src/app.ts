@@ -20,7 +20,7 @@ import { createGateSchema, gateIdParamSchema, patchGateSchema } from './gates/sc
 import { configService } from './config/service';
 import { patchConfigSchema } from './config/schema';
 import { attendanceService } from './attendance/service';
-import { historyQuerySchema, scanSchema } from './attendance/schema';
+import { historyQuerySchema, recordIdParamSchema, scanSchema } from './attendance/schema';
 import { reportsService } from './reports/service';
 import { dailyQuerySchema, exportQuerySchema, monthlyQuerySchema } from './reports/schema';
 import { buildDailyWorkbook, buildMonthlyWorkbook } from './reports/export';
@@ -103,6 +103,11 @@ app.post('/api/attendance/scan', auth, requireRole('murid'), async (context) => 
 });
 app.get('/api/attendance/me', auth, requireRole('murid'), async (context) => context.json(await attendanceService.history(context.get('auth').id, parse(context.req.query(), historyQuerySchema, 'Parameter tidak valid'))));
 app.get('/api/attendance/me/today', auth, requireRole('murid'), (context) => context.json({ data: attendanceService.todayRecord(context.get('auth').id) }));
+// Guru/admin membatalkan absensi murid — record dihapus, murid bisa scan ulang.
+app.delete('/api/attendance/records/:id', auth, requireRole('guru'), (context) => {
+  attendanceService.cancelRecord(context.get('auth').id, ip(context), parse(context.req.param('id'), recordIdParamSchema, 'Parameter tidak valid'));
+  return context.body(null, 204);
+});
 
 // ===== Registration codes (GURU+ADMIN) =====
 app.get('/api/registration-codes', auth, requireAdmin, (context) => context.json({ data: codesService.list() }));

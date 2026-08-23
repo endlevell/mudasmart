@@ -27,7 +27,7 @@ const activeStudents = (classId?: number) =>
 export const reportsRepository = {
   activeStudents,
   recordsForSession(sessionId: number) {
-    return db.select({ studentId: attendanceRecords.studentId, status: attendanceRecords.status, scannedAt: attendanceRecords.scannedAt }).from(attendanceRecords).where(eq(attendanceRecords.sessionId, sessionId)).all();
+    return db.select({ id: attendanceRecords.id, studentId: attendanceRecords.studentId, status: attendanceRecords.status, scannedAt: attendanceRecords.scannedAt }).from(attendanceRecords).where(eq(attendanceRecords.sessionId, sessionId)).all();
   },
   recordsInRange(startMs: number, endMs: number) {
     return db.select({ studentId: attendanceRecords.studentId, status: attendanceRecords.status, scannedAt: attendanceRecords.scannedAt }).from(attendanceRecords).where(and(gte(attendanceRecords.scannedAt, startMs), lt(attendanceRecords.scannedAt, endMs))).all();

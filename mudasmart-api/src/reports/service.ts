@@ -24,6 +24,8 @@ export const reportsService = {
         // Hari tanpa sesi: null (bukan alfa); hari bersesi tanpa record: Tidak Hadir.
         status: record ? record.status : session ? 'tidak hadir' : null,
         scannedAt: record?.scannedAt ?? null,
+        // Id record untuk aksi guru (mis. batalkan absensi); null saat belum scan.
+        recordId: record?.id ?? null,
       });
     }
     return { date, sessionStatus: session?.status ?? null, classes: [...grouped.values()] };

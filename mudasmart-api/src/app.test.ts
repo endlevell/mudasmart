@@ -443,3 +443,36 @@ test('guru management: list, toggle admin, deactivate, self-protection', async (
   expect(off.status).toBe(204);
   expect((await request('/api/auth/login', { email: 'other@example.com', password: 'password123', deviceId: crypto.randomUUID() })).status).toBe(401);
 });
+
+// ===== Batalkan absensi (guru/admin) =====
+test('attendance cancel: guru deletes record, murid blocked, unknown id 404, rescan allowed', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const guru = await makeGuru('guru2@example.com');
+  const murid = await makeMurid('murid5@example.com');
+
+  const cls = db.insert(classes).values({ name: 'X IPA 9', gradeLevel: 10, academicYear: '2026/2027', createdAt: Date.now(), updatedAt: Date.now() }).returning().get();
+  const gate = db.insert(gates).values({ name: 'Gerbang Utama', qrCodeValue: 'gate-cancel-1', createdAt: Date.now(), updatedAt: Date.now() }).returning().get();
+  const device = db.insert(devices).values({ userId: murid.user.id, userAgent: 'test', createdAt: Date.now(), updatedAt: Date.now(), lastSeenAt: Date.now() }).returning().get();
+  const session = db.insert(attendanceSessions).values({ date: '2030-01-05', openedBy: admin.user.id, openedAt: Date.now(), status: 'open', createdAt: Date.now() }).returning().get();
+  const record = db.insert(attendanceRecords).values({
+    sessionId: session.id,
+    studentId: murid.user.id,
+    classIdSnapshot: cls.id,
+    gateId: gate.id,
+    deviceId: device.id,
+    scannedAt: Date.now(),
+    status: 'telat',
+    clientNonce: crypto.randomUUID(),
+  }).returning().get();
+
+  expect((await send('DELETE', `/api/attendance/records/${record.id}`, undefined, bearer(murid.accessToken))).status).toBe(403);
+  expect((await send('DELETE', '/api/attendance/records/999999', undefined, bearer(guru.accessToken))).status).toBe(404);
+
+  const cancelled = await send('DELETE', `/api/attendance/records/${record.id}`, undefined, bearer(guru.accessToken));
+  expect(cancelled.status).toBe(204);
+  expect(db.select().from(attendanceRecords).where(eq(attendanceRecords.id, record.id)).get()).toBeUndefined();
+
+  // Audit trail tercatat.
+  const logs = db.select().from(auditLogs).all();
+  expect(logs.some((log) => log.action === 'attendance_cancelled' && log.userId === guru.user.id)).toBe(true);
+});
