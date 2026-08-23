@@ -1,17 +1,17 @@
-import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { colors, spacing, type } from '../../constants/theme';
+import { colors, radius, spacing, type } from '../../constants/theme';
 import { attendanceApi } from '../../api/attendance.api';
 import { sessionsApi } from '../../api/sessions.api';
 import { useAuthStore } from '../../store/auth-store';
 
-// Dashboard murid — status sesi & absen hari ini. Scan aktif hanya saat sesi terbuka (edge case 5).
+// Beranda murid — status sesi live (polling 15s) + CTA scan.
 export default function MuridDashboard() {
-  const { session: auth, logout } = useAuthStore();
+  const { session: auth } = useAuthStore();
   const user = auth?.user;
   const [sessionOpen, setSessionOpen] = useState<boolean | null>(null);
   const [todayStatus, setTodayStatus] = useState<{ status: string; time: string } | null>(null);
@@ -40,20 +40,21 @@ export default function MuridDashboard() {
 
   useEffect(() => {
     void load();
-    // Polling ringan: status sesi/absen ter-update otomatis tanpa logout-login.
     const interval = setInterval(() => void load(), 15_000);
     return () => clearInterval(interval);
   }, [load]);
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Halo,</Text>
-          <Text style={styles.name}>{user?.fullName}</Text>
+      <LinearGradient colors={['#073D2C', '#0B6E4F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+        <View style={styles.heroRow}>
+          <View>
+            <Text style={styles.greeting}>Halo,</Text>
+            <Text style={styles.name}>{user?.fullName}</Text>
+          </View>
+          <Badge label="Murid" tone="success" />
         </View>
-        <Badge label="Murid" tone="success" />
-      </View>
+      </LinearGradient>
 
       <Card style={styles.sessionCard}>
         <Text style={styles.sectionLabel}>Sesi Absensi</Text>
@@ -66,50 +67,34 @@ export default function MuridDashboard() {
             <Text style={styles.todayTime}>{todayStatus.time}</Text>
           </View>
         ) : (
-          <Text style={styles.hint}>Belum absen hari ini</Text>
+          <Text style={styles.hint}>{sessionOpen ? 'Tekan tombol Scan di bawah untuk absen' : 'Tunggu guru piket membuka sesi'}</Text>
         )}
-        <Button disabled={!sessionOpen || !!todayStatus} label="Scan Absen" onPress={() => router.push('/(murid)/scan')} />
+        <Button disabled={!sessionOpen || !!todayStatus} label="Scan Absen" onPress={() => void load()} />
       </Card>
 
-      <View style={styles.links}>
-        <Card style={styles.linkCard}>
-          <PressableRow label="Riwayat Absensi" sub="Rekap per bulan" onPress={() => router.push('/(murid)/riwayat')} />
-        </Card>
-      </View>
-
-      <Button label="Keluar" onPress={() => void logout()} variant="ghost" />
+      <Text style={styles.footnote}>Gunakan tab Scan di navigasi bawah untuk membuka kamera.</Text>
     </View>
   );
 }
 
-function PressableRow({ label, sub, onPress }: { label: string; sub: string; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.rowPress}>
-      <View>
-        <Text style={styles.rowLabel}>{label}</Text>
-        <Text style={styles.rowSub}>{sub}</Text>
-      </View>
-      <Text style={styles.chevron}>›</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, flex: 1, gap: spacing.md, padding: spacing.lg },
-  header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
-  greeting: { ...type.body, color: colors.textSecondary },
-  name: { ...type.title, color: colors.primary900 },
-  sessionCard: { gap: spacing.sm },
+  container: { backgroundColor: colors.backgroundAlt, flex: 1 },
+  hero: {
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  greeting: { ...type.body, color: 'rgba(255,255,255,0.75)' },
+  name: { ...type.title, color: colors.textInverse },
+  sessionCard: { gap: spacing.sm, margin: spacing.md },
   sectionLabel: { ...type.label, color: colors.textSecondary, textTransform: 'uppercase' },
   sessionState: { ...type.title, color: colors.primary700 },
   sessionClosed: { color: colors.textSecondary },
   hint: { ...type.caption, color: colors.textSecondary },
   todayRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   todayTime: { ...type.caption, color: colors.textSecondary },
-  links: { gap: spacing.sm },
-  linkCard: { paddingVertical: spacing.xs },
-  rowPress: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.xs, paddingVertical: spacing.sm },
-  rowLabel: { ...type.bodyStrong, color: colors.textPrimary },
-  rowSub: { ...type.caption, color: colors.textSecondary },
-  chevron: { color: colors.primary500, fontSize: 26, fontWeight: '700' },
+  footnote: { ...type.caption, color: colors.textSecondary, textAlign: 'center' },
 });

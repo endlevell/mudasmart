@@ -1,16 +1,16 @@
-import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { colors, spacing, type } from '../../constants/theme';
+import { colors, radius, spacing, type } from '../../constants/theme';
 import { sessionsApi, type AttendanceSession } from '../../api/sessions.api';
 import { useAuthStore } from '../../store/auth-store';
 
-// Dashboard guru — kontrol sesi + pintasan modul.
+// Beranda guru — kontrol sesi live (polling 15s). Modul lain via tab bawah.
 export default function GuruDashboard() {
-  const { session: auth, logout } = useAuthStore();
+  const { session: auth } = useAuthStore();
   const user = auth?.user;
   const [session, setSession] = useState<AttendanceSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,6 @@ export default function GuruDashboard() {
 
   useEffect(() => {
     void loadSession();
-    // Polling ringan agar kartu sesi tetap sinkron.
     const interval = setInterval(() => void loadSession(), 15_000);
     return () => clearInterval(interval);
   }, [loadSession]);
@@ -49,13 +48,15 @@ export default function GuruDashboard() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Halo,</Text>
-          <Text style={styles.name}>{user?.fullName}</Text>
+      <LinearGradient colors={['#073D2C', '#0B6E4F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+        <View style={styles.heroRow}>
+          <View>
+            <Text style={styles.greeting}>Halo,</Text>
+            <Text style={styles.name}>{user?.fullName}</Text>
+          </View>
+          <Badge label={user?.isAdmin ? 'Guru Admin' : 'Guru'} tone="info" />
         </View>
-        <Badge label={user?.isAdmin ? 'Guru Admin' : 'Guru'} tone="info" />
-      </View>
+      </LinearGradient>
 
       <Card style={styles.sessionCard}>
         <Text style={styles.sectionLabel}>Sesi Absensi Hari Ini</Text>
@@ -70,61 +71,34 @@ export default function GuruDashboard() {
               label={session?.status === 'open' ? 'Tutup Sesi' : 'Buka Sesi'}
               onPress={() => void toggle()}
               pending={pending}
-              variant={session?.status === 'open' ? 'danger-outline' : 'primary'}
+              variant={session?.status === 'open' ? 'danger-outline' : 'gradient'}
             />
           </>
         )}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </Card>
 
-      <Card>
-        <PressableRow label="Rekap Absensi" sub="Harian, bulanan, export Excel" onPress={() => router.push('/(guru)/rekap')} />
-        <Divider />
-        <PressableRow label="Kelola Murid" sub="Data murid & reset perangkat" onPress={() => router.push('/(guru)/murid')} />
-        <Divider />
-        <PressableRow label="Kelola Kelas" sub="Daftar kelas & wali kelas" onPress={() => router.push('/(guru)/kelas')} />
-        {user?.isAdmin ? (
-          <>
-            <Divider />
-            <PressableRow label="Kelola Gerbang" sub="QR gerbang & geofence" onPress={() => router.push('/(guru)/gerbang')} />
-            <Divider />
-            <PressableRow label="Pengaturan" sub="Jam absen & kode registrasi" onPress={() => router.push('/(guru)/pengaturan')} />
-          </>
-        ) : null}
-      </Card>
-
-      <Button label="Keluar" onPress={() => void logout()} variant="ghost" />
+      <Text style={styles.footnote}>Rekap, data murid, dan pengaturan ada di navigasi bawah.</Text>
     </View>
   );
 }
 
-function PressableRow({ label, sub, onPress }: { label: string; sub: string; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.rowPress}>
-      <View>
-        <Text style={styles.rowLabel}>{label}</Text>
-        <Text style={styles.rowSub}>{sub}</Text>
-      </View>
-      <Text style={styles.chevron}>›</Text>
-    </Pressable>
-  );
-}
-
-const Divider = () => <View style={styles.divider} />;
-
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, flex: 1, gap: spacing.md, padding: spacing.lg },
-  header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
-  greeting: { ...type.body, color: colors.textSecondary },
-  name: { ...type.title, color: colors.primary900 },
-  sessionCard: { gap: spacing.sm },
+  container: { backgroundColor: colors.backgroundAlt, flex: 1 },
+  hero: {
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  greeting: { ...type.body, color: 'rgba(255,255,255,0.75)' },
+  name: { ...type.title, color: colors.textInverse },
+  sessionCard: { gap: spacing.sm, margin: spacing.md },
   sectionLabel: { ...type.label, color: colors.textSecondary, textTransform: 'uppercase' },
   sessionState: { ...type.title, color: colors.primary700 },
   sessionClosed: { color: colors.textSecondary },
   error: { color: colors.danger, fontSize: type.caption.fontSize },
-  rowPress: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm },
-  rowLabel: { ...type.bodyStrong, color: colors.textPrimary },
-  rowSub: { ...type.caption, color: colors.textSecondary },
-  divider: { backgroundColor: colors.border, height: 1 },
-  chevron: { color: colors.primary500, fontSize: 26, fontWeight: '700' },
+  footnote: { ...type.caption, color: colors.textSecondary, textAlign: 'center' },
 });

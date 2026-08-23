@@ -60,3 +60,9 @@ export const type = {
   label: { fontSize: 13, fontWeight: '600' as const },
   caption: { fontSize: 12, fontWeight: '500' as const },
 };
+
+// Pasangan gradien resmi — dipakai hemat (header brand, tombol utama, tombol scan).
+export const gradients = {
+  brand: ['#073D2C', '#0B6E4F'],
+  fresh: ['#0B6E4F', '#16A374'],
+} as const;

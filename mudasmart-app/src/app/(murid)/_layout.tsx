@@ -1,17 +1,27 @@
-import { Stack } from 'expo-router';
-import { colors } from '../../constants/theme';
+import { Tabs, router } from 'expo-router';
+import { FloatingTabBar, type TabItem } from '../../components/floating-tab-bar';
+
+const tabs: TabItem[] = [
+  { key: 'beranda', label: 'Beranda', icon: 'home-outline', href: '/(murid)' },
+  { key: 'scan', label: 'Scan', icon: 'scan-outline', href: '/(murid)/scan', isCenter: true },
+  { key: 'riwayat', label: 'Riwayat', icon: 'time-outline', href: '/(murid)/riwayat' },
+  { key: 'profil', label: 'Profil', icon: 'person-outline', href: '/(murid)/profil' },
+];
 
 export default function MuridLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerTintColor: colors.primary700,
-        headerTitleStyle: { fontWeight: '600' },
+    <Tabs
+      screenOptions={{ headerShown: false }}
+      tabBar={({ state }) => {
+        const active = state.routes[state.index]?.name ?? '';
+        const activeKey = tabs.find((tab) => tab.href.endsWith(active))?.key ?? 'beranda';
+        return <FloatingTabBar tabs={tabs} activeKey={activeKey} onSelect={(href) => router.navigate(href as never)} />;
       }}
     >
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="scan" options={{ headerShown: false }} />
-      <Stack.Screen name="riwayat" options={{ title: 'Riwayat Absensi' }} />
-    </Stack>
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="scan" />
+      <Tabs.Screen name="riwayat" />
+      <Tabs.Screen name="profil" />
+    </Tabs>
   );
 }

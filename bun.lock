@@ -33,6 +33,7 @@
       "name": "mudasmart-app",
       "version": "1.0.0",
       "dependencies": {
+        "@expo/vector-icons": "^15.0.2",
         "@react-navigation/bottom-tabs": "^7.15.5",
         "@react-navigation/elements": "^2.9.10",
         "@react-navigation/native": "^7.1.33",
@@ -43,7 +44,9 @@
         "expo-device": "~55.0.20",
         "expo-font": "~55.0.8",
         "expo-glass-effect": "~55.0.11",
+        "expo-haptics": "~55.0.17",
         "expo-image": "~55.0.11",
+        "expo-linear-gradient": "~55.0.17",
         "expo-linking": "~55.0.17",
         "expo-location": "~55.1.13",
         "expo-router": "~55.0.18",
@@ -1074,9 +1077,13 @@
 
     "expo-glass-effect": ["expo-glass-effect@55.0.11", "", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-wqq7GUOqSkfoFJzreZvBG0jzjsq5c582m3glhWSjcmIuByxXXWp6j6GY6hyFuYKzpOXhbuvusVxGCQi0yWnp3g=="],
 
+    "expo-haptics": ["expo-haptics@55.0.17", "", { "peerDependencies": { "expo": "*" } }, "sha512-y/ND4nlUo2Fw1uOvxlYxQmTtcGTnVp+UixEx0xPiLFKGzsKRzWauoYD+ZtkU7QHZnGLbPmdK/v5SUNBi76krmw=="],
+
     "expo-image": ["expo-image@55.0.11", "", { "dependencies": { "sf-symbols-typescript": "^2.2.0" }, "peerDependencies": { "expo": "*", "react": "*", "react-native": "*", "react-native-web": "*" }, "optionalPeers": ["react-native-web"] }, "sha512-PVIBYQJW/h1f6Zb9xnoWlgfqyOPVm2yb6eo6ZogaKbvMrhb/Q/fiERbagi4oqmR6IPljWPEpkXXQyFBUh7TjpQ=="],
 
     "expo-keep-awake": ["expo-keep-awake@55.0.8", "", { "peerDependencies": { "expo": "*", "react": "*" } }, "sha512-PfIpMfM+STOBwkR5XOE+yVtER86c44MD+W8QD8JxuO0sT9pF7Y1SJYakWlpvX8xsGA+bjKLxftm9403s9kQhKA=="],
+
+    "expo-linear-gradient": ["expo-linear-gradient@55.0.17", "", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-aZ/7vVPybpQP6HwKpgQfQCzNMyzCDCPvr5JXco5EmBQBoORudBpLj2wyKBautRriUaYjDUpS49nWCinW7ZTuLQ=="],
 
     "expo-linking": ["expo-linking@55.0.17", "", { "dependencies": { "expo-constants": "~55.0.17", "invariant": "^2.2.4" }, "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-rc41rUbFYdJ4IdPxWQiTDtkOlEbtYQkvsCASzW1pqskfRShAd4tYyyAw1BTez3Cq1IgWkK3wcGR+HbFdzZ7ImQ=="],
 

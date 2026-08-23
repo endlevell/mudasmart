@@ -93,14 +93,14 @@ export default function ScanScreen() {
                 <Text style={[styles.statusLabel, { color: result.status === 'hadir' ? colors.primary700 : colors.warning }]}>
                   Status: {result.status.toUpperCase()}
                 </Text>
-                <Button label="Kembali" onPress={() => router.back()} />
+                <Button label="Kembali ke Beranda" onPress={() => router.navigate("/(murid)")} />
               </>
             ) : (
               <>
                 <Text style={[styles.resultTitle, { color: colors.danger }]}>Gagal</Text>
                 <Text style={styles.resultMessage}>{error}</Text>
                 <Button label="Coba Lagi" onPress={retry} />
-                <Button label="Tutup" onPress={() => router.back()} variant="danger-outline" />
+                <Button label="Tutup" onPress={() => router.navigate("/(murid)")} variant="danger-outline" />
               </>
             )}
           </View>
