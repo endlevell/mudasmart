@@ -24,7 +24,9 @@ export default function RegisterScreen() {
     }
     setErrors({});
     try {
-      await register(parsed.data);
+      // confirmPassword hanya untuk validasi sisi client — jangan dikirim ke server (.strict() akan menolak).
+      const { confirmPassword: _ignored, ...payload } = parsed.data;
+      await register(payload);
       // Redirect ditangani root layout berdasarkan role hasil registrasi.
       router.replace('/(murid)');
     } catch {
