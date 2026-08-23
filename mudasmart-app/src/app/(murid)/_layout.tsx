@@ -1,5 +1,5 @@
 import { Tabs, router, type Href } from 'expo-router';
-import { FloatingTabBar, type TabItem } from '../../components/floating-tab-bar';
+import { FloatingTabBar, resolveActiveTabKey, type TabItem } from '../../components/floating-tab-bar';
 
 const tabs: TabItem[] = [
   { key: 'beranda', routeName: 'index', label: 'Beranda', icon: 'home-outline', href: '/(murid)' },
@@ -14,7 +14,7 @@ export default function MuridLayout() {
       tabBar={({ state }) => (
         <FloatingTabBar
           tabs={tabs}
-          activeKey={state.routes[state.index]?.name ?? 'index'}
+          activeKey={resolveActiveTabKey(tabs, state.routes[state.index]?.name)}
           onSelect={(href) => router.navigate(href as Href)}
         />
       )}

@@ -17,6 +17,12 @@ export interface TabItem {
   isCenter?: boolean;
 }
 
+/** Peta nama route aktif → key tab; toleran rute bersarang (mis. "rekap/index"). */
+export function resolveActiveTabKey(tabs: TabItem[], routeName: string | undefined): string {
+  if (!routeName) return '';
+  return tabs.find((tab) => tab.routeName === routeName || routeName.startsWith(`${tab.routeName}/`))?.key ?? '';
+}
+
 interface FloatingTabBarProps {
   tabs: TabItem[];
   /** key dari tab aktif — dihitung layout induk dari pathname (deterministik). */
