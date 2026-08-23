@@ -27,16 +27,22 @@ export default function RootLayout() {
     if (!hydrated || !flagPrimed) return;
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = segments[0] === 'onboarding';
-    if (!session) {
-      if (!onboardingSeenSync() && !inOnboarding) {
-        router.replace('/onboarding');
-      } else if (!inAuth && !inOnboarding) {
-        router.replace('/(auth)/login');
+
+    // Redirect ditunda seperlunya: replace yang ditembakkan bersamaan dengan transisi
+    // unmount layar auth memicu race Fabric Android ("child already has a parent").
+    const timer = setTimeout(() => {
+      if (!session) {
+        if (!onboardingSeenSync() && !inOnboarding) {
+          router.replace('/onboarding');
+        } else if (!inAuth && !inOnboarding) {
+          router.replace('/(auth)/login');
+        }
+      } else if (inAuth || inOnboarding) {
+        router.replace(session.user.role === 'murid' ? '/(murid)' : '/(guru)');
       }
-    } else if (inAuth || inOnboarding) {
-      router.replace(session.user.role === 'murid' ? '/(murid)' : '/(guru)');
-    }
-    SplashScreen.hideAsync().catch(() => {});
+      SplashScreen.hideAsync().catch(() => {});
+    }, 120);
+    return () => clearTimeout(timer);
   }, [hydrated, flagPrimed, session, segments, router]);
 
   return <Stack screenOptions={{ headerShown: false }} />;
