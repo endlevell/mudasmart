@@ -10,7 +10,7 @@ import { env } from './config/env';
 import { authService } from './auth/service';
 import { changePasswordSchema, loginSchema, logoutSchema, refreshSchema, registerSchema } from './auth/schema';
 import { studentsService } from './students/service';
-import { idParamSchema, listStudentsQuerySchema, patchStudentSchema } from './students/schema';
+import { idParamSchema, importStudentsSchema, listStudentsQuerySchema, patchStudentSchema } from './students/schema';
 import { classesService } from './classes/service';
 import { classIdParamSchema, createClassSchema, patchClassSchema } from './classes/schema';
 import { sessionsService } from './sessions/service';
@@ -88,6 +88,8 @@ app.patch('/api/users/:id/password', auth, requireAdmin, async (context) => {
 
 // ===== Students (GURU; deactivate admin) =====
 app.get('/api/students', auth, requireRole('guru'), async (context) => context.json(await studentsService.list(parse(context.req.query(), listStudentsQuerySchema, 'Parameter tidak valid'))));
+// Import massal murid dari baris CSV yang dikirim client (admin).
+app.post('/api/students/import', auth, requireAdmin, async (context) => context.json(await studentsService.import(context.get('auth').id, ip(context), (await body(context.req.raw, importStudentsSchema)).rows)));
 app.get('/api/students/:id', auth, requireRole('guru'), (context) => context.json({ data: studentsService.detail(parse(context.req.param('id'), idParamSchema, 'Parameter tidak valid')) }));
 app.patch('/api/students/:id', auth, requireRole('guru'), async (context) => context.json({ data: studentsService.update(context.get('auth').id, ip(context), parse(context.req.param('id'), idParamSchema, 'Parameter tidak valid'), await body(context.req.raw, patchStudentSchema)) }));
 app.patch('/api/students/:id/deactivate', auth, requireAdmin, (context) => { studentsService.deactivate(context.get('auth').id, ip(context), parse(context.req.param('id'), idParamSchema, 'Parameter tidak valid')); return context.body(null, 204); });

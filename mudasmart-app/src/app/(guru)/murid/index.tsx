@@ -1,16 +1,20 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Card } from '../../../components/ui/card';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { PressableScale } from '../../../components/ui/pressable-scale';
 import { ScreenHeader } from '../../../components/ui/screen-header';
 import { Select } from '../../../components/ui/select';
+import { toast } from '../../../components/ui/toast';
 import { colors, radius, spacing, type } from '../../../constants/theme';
 import { classesApi, type ClassRoom } from '../../../api/classes.api';
 import { studentsApi, type Student } from '../../../api/students.api';
+import { parseCsv } from '../../../utils/csv';
 
 const initialsOf = (fullName: string) =>
   fullName
@@ -49,11 +53,61 @@ export default function KelolaMuridScreen() {
       .catch(() => {});
   }, []);
 
+  // Import CSV: kolom yang diharapkan — Nama, Email, NIS, Kelas (opsional).
+  const importCsv = async () => {
+    const picked = await DocumentPicker.getDocumentAsync({ type: ['text/csv', 'text/comma-separated-values', 'text/plain'], copyToCacheDirectory: true });
+    if (picked.canceled) return;
+    try {
+      const text = await FileSystem.readAsStringAsync(picked.assets[0].uri);
+      const table = parseCsv(text);
+      if (table.length < 2) throw new Error('File kosong atau hanya berisi header');
+      const header = table[0].map((cell) => cell.trim().toLowerCase());
+      const col = (...names: string[]) => header.findIndex((h) => names.some((n) => h === n));
+      const iName = col('nama', 'nama lengkap', 'fullname', 'name');
+      const iEmail = col('email');
+      const iNis = col('nis');
+      const iClass = col('kelas', 'class');
+      if (iName < 0 || iEmail < 0 || iNis < 0) throw new Error('Header wajib memuat kolom: Nama, Email, NIS');
+
+      const rows = table.slice(1).map((cells) => ({
+        fullName: cells[iName]?.trim() ?? '',
+        email: cells[iEmail]?.trim() ?? '',
+        nis: cells[iNis]?.trim() ?? '',
+        ...(iClass >= 0 && cells[iClass]?.trim() ? { className: cells[iClass].trim() } : {}),
+      }));
+      Alert.alert('Import Murid', `${rows.length} baris akan diimpor sebagai akun murid baru. Lanjutkan?`, [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Import',
+          onPress: () => {
+            void (async () => {
+              try {
+                const result = await studentsApi.importStudents(rows);
+                const failedText = result.failed.slice(0, 4).map((f) => `Baris ${f.row}: ${f.reason}`).join('\n');
+                Alert.alert(
+                  'Hasil Import',
+                  `${result.created} akun dibuat.${result.failed.length ? `\n\n${result.failed.length} gagal:\n${failedText}${result.failed.length > 4 ? '\n...' : ''}` : ''}\n\nKata sandi sementara tiap murid ada di respons admin — bagikan ke masing-masing murid.`,
+                );
+                toast.show({ tone: result.failed.length ? 'warning' : 'success', title: 'Import selesai', message: `${result.created} akun dibuat, ${result.failed.length} gagal.` });
+                void load(search, classId);
+              } catch (e) {
+                toast.show({ tone: 'danger', title: 'Gagal import', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
+              }
+            })();
+          },
+        },
+      ]);
+    } catch (e) {
+      toast.show({ tone: 'danger', title: 'Gagal membaca file', message: e instanceof Error ? e.message : 'Pastikan format CSV benar.' });
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScreenHeader title="Kelola Murid" subtitle="Cari, filter, dan kelola data murid" />
       <View style={styles.content}>
-        <View style={[styles.searchWrap, { marginTop: spacing.md }]}>
+      <View style={styles.topRow}>
+        <View style={[styles.searchWrap, { flex: 1 }]}>
           <Ionicons name="search" size={17} color={colors.textSecondary} />
           <TextInput
             onChangeText={(value) => setSearch(value)}
@@ -68,6 +122,11 @@ export default function KelolaMuridScreen() {
             </Pressable>
           ) : null}
         </View>
+        <PressableScale onPress={() => void importCsv()} style={styles.importButton}>
+          <Ionicons name="cloud-upload-outline" size={18} color={colors.primary700} />
+          <Text style={styles.importText}>CSV</Text>
+        </PressableScale>
+      </View>
         <Select
           label="Filter Kelas"
           onSelect={(value) => setClassId(value)}
@@ -114,6 +173,7 @@ export default function KelolaMuridScreen() {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.backgroundAlt, flex: 1 },
   content: { flex: 1, padding: spacing.md },
+  topRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   searchWrap: {
     alignItems: 'center',
     backgroundColor: colors.background,
@@ -122,11 +182,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm + 2,
-    marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
   },
   search: { color: colors.textPrimary, flex: 1, fontSize: type.body.fontSize, paddingVertical: 14 },
   searchClear: { padding: 2 },
+  importButton: { alignItems: 'center', backgroundColor: colors.primary100, borderRadius: radius.md, justifyContent: 'center', paddingHorizontal: spacing.md },
+  importText: { fontSize: 11, fontWeight: '800', color: colors.primary700 },
   count: { ...type.caption, color: colors.textSecondary, marginBottom: spacing.sm },
   error: { color: colors.danger, fontSize: type.caption.fontSize, marginBottom: spacing.sm },
   separator: { height: spacing.sm },

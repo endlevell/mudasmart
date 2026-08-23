@@ -40,6 +40,12 @@ export const studentsApi = {
   list: (params: ListParams = {}) => api.get<{ data: Student[]; total: number; page: number; pageSize: number }>(`/api/students${toQuery(params)}`),
   detail: (id: string) => api.get<{ data: Student }>(`/api/students/${id}`),
   update: (id: string, input: { fullName?: string; classId?: number }) => api.patch<{ data: Student }>(`/api/students/${id}`, input),
+  // Import massal — baris CSV sudah diparse client; server validasi & buat akun.
+  importStudents: (rows: { fullName: string; email: string; nis: string; className?: string }[]) =>
+    api.post<{ created: number; failed: { row: number; name: string; reason: string }[]; credentials: { email: string; password: string; fullName: string }[] }>(
+      '/api/students/import',
+      { rows },
+    ),
   deactivate: (id: string) => api.patch<null>(`/api/students/${id}/deactivate`, {}),
   device: (id: string) => api.get<{ data: DeviceInfo }>(`/api/students/${id}/device`),
   resetDevice: (id: string) => api.patch<null>(`/api/students/${id}/device/reset`, {}),

@@ -14,3 +14,14 @@ export const patchStudentSchema = z.object({
 }).strict().refine((value) => Object.keys(value).length > 0, { message: 'Tidak ada perubahan' });
 
 export const idParamSchema = z.string().uuid();
+
+// Import massal — baris CSV sudah dikonversi client menjadi JSON.
+export const importRowSchema = z.object({
+  fullName: z.string().trim().min(1).max(100),
+  email: z.string().trim().email().max(254),
+  nis: z.string().trim().min(1).max(64),
+  className: z.string().trim().min(1).max(64).optional(),
+}).strict();
+export const importStudentsSchema = z.object({
+  rows: z.array(importRowSchema).min(1).max(200),
+}).strict();

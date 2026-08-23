@@ -1,4 +1,4 @@
-import { and, asc, count, eq, like, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, like, or, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { classes, devices, studentProfiles, users } from '../db/schema';
 
@@ -50,5 +50,21 @@ export const studentsRepository = {
   },
   resetDevice(userId: string, now: number) {
     db.update(devices).set({ deviceId: null, resetCount: sql`${devices.resetCount} + 1`, updatedAt: now }).where(eq(devices.userId, userId)).run();
+  },
+  // ===== Import massal =====
+  emailsByEmails(emails: string[]) {
+    return db.select({ email: users.email }).from(users).where(inArray(users.email, emails)).all();
+  },
+  nisByNis(nisList: string[]) {
+    return db.select({ nis: studentProfiles.nis }).from(studentProfiles).where(inArray(studentProfiles.nis, nisList)).all();
+  },
+  classByName(name: string) {
+    return db.select({ id: classes.id }).from(classes).where(eq(classes.name, name)).get();
+  },
+  createStudent(input: { id: string; email: string; passwordHash: string; fullName: string; nis: string; classId: number | null; now: number }) {
+    db.transaction(() => {
+      db.insert(users).values({ id: input.id, email: input.email, passwordHash: input.passwordHash, fullName: input.fullName, role: 'murid', isActive: true, createdAt: input.now, updatedAt: input.now }).run();
+      db.insert(studentProfiles).values({ userId: input.id, nis: input.nis, classId: input.classId, createdAt: input.now, updatedAt: input.now }).run();
+    });
   },
 };

@@ -477,6 +477,36 @@ test('attendance cancel: guru deletes record, murid blocked, unknown id 404, res
   expect(logs.some((log) => log.action === 'attendance_cancelled' && log.userId === guru.user.id)).toBe(true);
 });
 
+// ===== Import murid massal =====
+test('student import: creates accounts, rejects duplicates and unknown class', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const created = await send('POST', '/api/classes', { name: 'X IPA 7', gradeLevel: 10, academicYear: '2026/2027' }, bearer(admin.accessToken));
+  expect(created.status).toBe(201);
+
+  const result = await send('POST', '/api/students/import', {
+    rows: [
+      { fullName: 'Ani', email: 'ani@example.com', nis: '5001', className: 'X IPA 7' },
+      { fullName: 'Budi', email: 'budi@example.com', nis: '5002', className: 'X IPA 7' },
+      { fullName: 'Cici', email: 'ani@example.com', nis: '5003' },
+      { fullName: 'Dedi', email: 'dedi@example.com', nis: '5001' },
+      { fullName: 'Eka', email: 'eka@example.com', nis: '5004', className: 'Tidak Ada' },
+    ],
+  }, bearer(admin.accessToken));
+  expect(result.status).toBe(200);
+  const body = (await result.json()) as { created: number; failed: Array<{ reason: string }>; credentials: Array<{ email: string; password: string }> };
+  expect(body.created).toBe(2);
+  expect(body.failed.length).toBe(3);
+  expect(body.credentials.every((c) => c.password.startsWith('Muda-'))).toBe(true);
+
+  // Akun hasil import bisa login.
+  const login = await request('/api/auth/login', { email: 'ani@example.com', password: body.credentials[0].password, deviceId: crypto.randomUUID() });
+  expect(login.status).toBe(200);
+
+  // Murid biasa tidak boleh import.
+  const murid = await makeMurid('murid9@example.com');
+  expect((await send('POST', '/api/students/import', { rows: [{ fullName: 'X', email: 'x@example.com', nis: '9999' }] }, bearer(murid.accessToken))).status).toBe(403);
+});
+
 // ===== Izin/sakit (leave request) =====
 test('leave requests: murid submits, guru approves, reports count izin', async () => {
   process.env.UPLOAD_DIR = '/tmp/muda-uploads-test';
