@@ -49,6 +49,8 @@ async function request<T>(path: string, init: RequestInit, auth: boolean, retrie
   if (response.status === 401 && auth && !retried && !path.startsWith('/api/auth/')) {
     const refreshed = await tryRefresh(tokens.refreshToken ?? null);
     if (refreshed) return request<T>(path, init, auth, true);
+    // Diagnostik: terlihat di logcat (ReactNativeJS) bila sesi benar-benar kedaluwarsa.
+    console.warn('[auth] refresh gagal, sesi diakhiri:', path);
     onSessionExpired();
   }
 

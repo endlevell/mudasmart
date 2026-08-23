@@ -91,8 +91,9 @@ export const authService = {
     }
     // Token refresh terikat ke baris device milik user ini (deviceId string kini bisa dipakai bersama antar akun).
     const device = repository.deviceByUser.all({ userId: user.id })[0];
+    // Mismatch/perangkat hilang: tolak TANPA mencabut token — pencabutan di sini
+    // membuat sesi mati permanen karena kondisi transient (mis. race device row).
     if (!device || device.id !== stored.deviceId || device.deviceId !== input.deviceId || stored.expiresAt <= now()) {
-      db.transaction(() => repository.revokeToken.run({ tokenHash: hashToken(input.refreshToken), now: now() }));
       throw fail(401, 'Refresh token tidak valid');
     }
     const refreshToken = newToken();
