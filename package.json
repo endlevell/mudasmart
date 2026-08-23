@@ -1,5 +1,6 @@
 {
   "name": "mudasmart",
+  "main": "expo-router/entry",
   "private": true,
   "workspaces": ["mudasmart-api", "mudasmart-app"],
   "scripts": {
