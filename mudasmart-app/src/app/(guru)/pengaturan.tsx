@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Badge } from '../../components/ui/badge';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { ScreenHeader } from '../../components/ui/screen-header';
 import { Select } from '../../components/ui/select';
-import { colors, spacing, type } from '../../constants/theme';
+import { colors, radius, spacing, type } from '../../constants/theme';
 import { codesApi, type RegistrationCode } from '../../api/codes.api';
 import { configApi } from '../../api/sessions.api';
 
@@ -106,51 +107,84 @@ export default function PengaturanScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.backgroundAlt }} contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Pengaturan" subtitle="Jam absen & kode registrasi" />
       <View style={styles.content}>
-      <Card>
-        <Text style={styles.sectionTitle}>Jam Absen</Text>
-        <Input label="Mulai Absen" onChangeText={(v) => setConfig((p) => ({ ...p, checkInStart: v }))} placeholder="06:00" value={config.checkInStart} />
-        <Input label="Batas Tepat Waktu" onChangeText={(v) => setConfig((p) => ({ ...p, onTimeCutoff: v }))} placeholder="07:00" value={config.onTimeCutoff} />
-        <Input label="Akhir Absen" onChangeText={(v) => setConfig((p) => ({ ...p, checkInEnd: v }))} placeholder="08:00" value={config.checkInEnd} />
-        <Button label="Simpan Jam Absen" onPress={() => void saveConfig()} pending={pending} />
-      </Card>
+        <Animated.View entering={FadeInDown.delay(40)}>
+          <Card>
+            <View style={styles.sectionHead}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="time-outline" size={17} color={colors.primary700} />
+              </View>
+              <Text style={styles.sectionTitle}>Jam Absen</Text>
+            </View>
+            <Input label="Mulai Absen" onChangeText={(v) => setConfig((p) => ({ ...p, checkInStart: v }))} placeholder="06:00" value={config.checkInStart} />
+            <Input label="Batas Tepat Waktu" onChangeText={(v) => setConfig((p) => ({ ...p, onTimeCutoff: v }))} placeholder="07:00" value={config.onTimeCutoff} />
+            <Input label="Akhir Absen" onChangeText={(v) => setConfig((p) => ({ ...p, checkInEnd: v }))} placeholder="08:00" value={config.checkInEnd} />
+            <Button label="Simpan Jam Absen" onPress={() => void saveConfig()} pending={pending} />
+          </Card>
+        </Animated.View>
 
-      <Card>
-        <Text style={styles.sectionTitle}>Kode Registrasi</Text>
-        {codes.map((code) => (
-          <View key={code.code} style={styles.codeRow}>
-            <View style={styles.codeInfo}>
-              <Text style={styles.codeText}>{code.code}</Text>
-              <Text style={styles.meta}>
-                {code.roleAllowed} · terpakai {code.usedCount}{code.maxUses ? `/${code.maxUses}` : ''}
-              </Text>
+        <Animated.View entering={FadeInDown.delay(90)}>
+          <Card>
+            <View style={styles.sectionHead}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="key-outline" size={17} color={colors.primary700} />
+              </View>
+              <Text style={styles.sectionTitle}>Kode Registrasi</Text>
+              {codes.length > 0 ? <Text style={styles.sectionCount}>{codes.filter((code) => code.isActive).length} aktif</Text> : null}
             </View>
-            <View style={styles.codeActions}>
-              <Badge label={code.isActive ? 'Aktif' : 'Nonaktif'} tone={code.isActive ? 'success' : 'neutral'} />
-              <Pressable onPress={() => toggleCode(code)} hitSlop={8}>
-                <Text style={styles.toggle}>{code.isActive ? 'Nonaktifkan' : 'Aktifkan'}</Text>
-              </Pressable>
-            </View>
+
+            {codes.map((code) => (
+              <View key={code.code} style={styles.codeRow}>
+                <View style={styles.codeBadge}>
+                  <Text style={styles.codeText}>{code.code}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.codeMetaRow}>
+                    <View style={[styles.roleTag, code.roleAllowed === 'guru' ? styles.roleGuru : styles.roleMurid]}>
+                      <Ionicons name={code.roleAllowed === 'guru' ? 'school-outline' : 'person-outline'} size={10} color={code.roleAllowed === 'guru' ? colors.info : colors.primary700} />
+                      <Text style={[styles.roleTagText, { color: code.roleAllowed === 'guru' ? colors.info : colors.primary700 }]}>
+                        {code.roleAllowed === 'guru' ? 'Guru' : 'Murid'}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusDotWrap, { backgroundColor: code.isActive ? colors.primary100 : colors.surfaceMuted }]}>
+                      <View style={[styles.statusDot, { backgroundColor: code.isActive ? colors.primary500 : colors.textSecondary }]} />
+                    </View>
+                  </View>
+                  <Text style={styles.meta}>
+                    Terpakai {code.usedCount}{code.maxUses ? `/${code.maxUses}` : ''} kali
+                  </Text>
+                </View>
+                <Pressable hitSlop={8} onPress={() => toggleCode(code)} style={styles.toggleBtn}>
+                  <Text style={[styles.toggleText, { color: code.isActive ? colors.danger : colors.primary700 }]}>
+                    {code.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                  </Text>
+                </Pressable>
+              </View>
+            ))}
+            {codes.length === 0 ? <Text style={styles.meta}>Belum ada kode</Text> : null}
+
+            <View style={styles.divider} />
+            <Input label="Kode Baru" onChangeText={(v) => setNewCode((p) => ({ ...p, code: v }))} placeholder="MURID2027" value={newCode.code} autoCapitalize="characters" />
+            <Select
+              label="Role"
+              onSelect={(value) => setNewCode((p) => ({ ...p, roleAllowed: value }))}
+              options={[
+                { label: 'Murid', value: 'murid' },
+                { label: 'Guru', value: 'guru' },
+              ]}
+              value={newCode.roleAllowed}
+            />
+            <Input keyboardType="number-pad" label="Maks. Pemakaian (opsional)" onChangeText={(v) => setNewCode((p) => ({ ...p, maxUses: v }))} placeholder="Tanpa batas" value={newCode.maxUses} />
+            <Button label="Buat Kode" onPress={() => void createCode()} pending={pending} />
+          </Card>
+        </Animated.View>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {notice ? (
+          <View style={styles.noticeBox}>
+            <Ionicons name="checkmark-circle" size={15} color={colors.primary700} />
+            <Text style={styles.notice}>{notice}</Text>
           </View>
-        ))}
-        {codes.length === 0 ? <Text style={styles.meta}>Belum ada kode</Text> : null}
-
-        <View style={styles.divider} />
-        <Input label="Kode Baru" onChangeText={(v) => setNewCode((p) => ({ ...p, code: v }))} placeholder="MURID2027" value={newCode.code} autoCapitalize="characters" />
-        <Select
-          label="Role"
-          onSelect={(value) => setNewCode((p) => ({ ...p, roleAllowed: value }))}
-          options={[
-            { label: 'Murid', value: 'murid' },
-            { label: 'Guru', value: 'guru' },
-          ]}
-          value={newCode.roleAllowed}
-        />
-        <Input keyboardType="number-pad" label="Maks. Pemakaian (opsional)" onChangeText={(v) => setNewCode((p) => ({ ...p, maxUses: v }))} placeholder="Tanpa batas" value={newCode.maxUses} />
-        <Button label="Buat Kode" onPress={() => void createCode()} pending={pending} />
-      </Card>
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -159,14 +193,25 @@ export default function PengaturanScreen() {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.backgroundAlt },
   content: { gap: spacing.md, padding: spacing.md },
-  sectionTitle: { ...type.label, color: colors.textSecondary, marginBottom: spacing.xs, textTransform: 'uppercase' },
-  codeRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm },
-  codeInfo: { flex: 1 },
-  codeText: { ...type.bodyStrong, color: colors.textPrimary },
-  meta: { ...type.caption, color: colors.textSecondary },
-  codeActions: { alignItems: 'flex-end', gap: spacing.xs },
-  toggle: { color: colors.info, fontSize: type.caption.fontSize, fontWeight: '600' },
+  sectionHead: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm + 2, marginBottom: spacing.xs },
+  sectionIcon: { alignItems: 'center', backgroundColor: colors.primary50, borderRadius: 10, height: 34, justifyContent: 'center', width: 34 },
+  sectionTitle: { ...type.heading, color: colors.primary700, flex: 1 },
+  sectionCount: { ...type.caption, fontWeight: '700', color: colors.textSecondary },
+  codeRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm + 2, paddingVertical: spacing.sm - 2 },
+  codeBadge: { backgroundColor: colors.surfaceMuted, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs + 1 },
+  codeText: { fontSize: type.caption.fontSize, fontWeight: '800', letterSpacing: 0.8, color: colors.textPrimary },
+  codeMetaRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  roleTag: { alignItems: 'center', borderRadius: radius.full, flexDirection: 'row', gap: 3, paddingHorizontal: 7, paddingVertical: 2 },
+  roleMurid: { backgroundColor: colors.primary100 },
+  roleGuru: { backgroundColor: colors.infoBg },
+  roleTagText: { fontSize: 10, fontWeight: '700' },
+  statusDotWrap: { borderRadius: radius.full, paddingHorizontal: 5, paddingVertical: 5 },
+  statusDot: { borderRadius: radius.full, height: 6, width: 6 },
+  meta: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
+  toggleBtn: { backgroundColor: colors.backgroundAlt, borderColor: colors.border, borderRadius: radius.full, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6 },
+  toggleText: { fontSize: type.caption.fontSize, fontWeight: '700' },
   divider: { backgroundColor: colors.border, height: 1, marginVertical: spacing.sm },
-  error: { color: colors.danger, fontSize: type.caption.fontSize },
+  noticeBox: { alignItems: 'center', backgroundColor: colors.primary50, borderRadius: radius.md, flexDirection: 'row', gap: 6, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2 },
   notice: { color: colors.primary700, fontSize: type.caption.fontSize, fontWeight: '600' },
+  error: { color: colors.danger, fontSize: type.caption.fontSize },
 });

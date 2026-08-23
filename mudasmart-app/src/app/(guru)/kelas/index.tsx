@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { Input } from '../../../components/ui/input';
+import { PressableScale } from '../../../components/ui/pressable-scale';
 import { ScreenHeader } from '../../../components/ui/screen-header';
-import { colors, spacing, type } from '../../../constants/theme';
+import { colors, radius, spacing, type } from '../../../constants/theme';
 import { classesApi, type ClassRoom } from '../../../api/classes.api';
 import { useAuthStore } from '../../../store/auth-store';
 
@@ -69,13 +70,20 @@ export default function KelolaKelasScreen() {
       {items.map((item, index) => (
         <Animated.View key={String(item.id)} entering={FadeInDown.delay(index * 50)}>
           <Card>
-            <Pressable disabled={!isAdmin} onPress={() => startEdit(item)} style={styles.row}>
-              <View>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.meta}>Tingkat {item.gradeLevel} · {item.academicYear}</Text>
+            <PressableScale disabled={!isAdmin} onPress={() => startEdit(item)} style={styles.row}>
+              <View style={styles.classIcon}>
+                <Ionicons name="school-outline" size={19} color={colors.primary700} />
               </View>
-              <Badge label={`${item.studentCount} murid`} tone="success" />
-            </Pressable>
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={styles.name}>{item.name}</Text>
+                <Text numberOfLines={1} style={styles.meta}>Tingkat {item.gradeLevel} · {item.academicYear}</Text>
+              </View>
+              <View style={styles.countPill}>
+                <Ionicons name="people-outline" size={12} color={colors.primary700} />
+                <Text style={styles.countText}>{item.studentCount}</Text>
+              </View>
+              {isAdmin ? <Ionicons name="pencil" size={15} color={colors.textSecondary} /> : null}
+            </PressableScale>
           </Card>
         </Animated.View>
       ))}
@@ -85,7 +93,12 @@ export default function KelolaKelasScreen() {
 
       {isAdmin ? (
         <Card style={styles.formCard}>
-          <Text style={styles.formTitle}>{editing ? `Edit ${editing.name}` : 'Tambah Kelas'}</Text>
+          <View style={styles.formHead}>
+            <View style={styles.classIcon}>
+              <Ionicons name="add" size={18} color={colors.primary700} />
+            </View>
+            <Text style={styles.formTitle}>{editing ? `Edit ${editing.name}` : 'Tambah Kelas'}</Text>
+          </View>
           <Input label="Nama Kelas" onChangeText={(name) => setForm((prev) => ({ ...prev, name }))} placeholder="XI IPA 1" value={form.name} />
           <Input keyboardType="number-pad" label="Tingkat" onChangeText={(gradeLevel) => setForm((prev) => ({ ...prev, gradeLevel }))} placeholder="10" value={form.gradeLevel} />
           <Input label="Tahun Ajaran" onChangeText={(academicYear) => setForm((prev) => ({ ...prev, academicYear }))} placeholder="2026/2027" value={form.academicYear} />
@@ -108,12 +121,15 @@ export default function KelolaKelasScreen() {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.backgroundAlt },
   content: { padding: spacing.md, gap: spacing.sm },
-  row: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  row: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  classIcon: { alignItems: 'center', backgroundColor: colors.primary50, borderRadius: 10, height: 38, justifyContent: 'center', width: 38 },
+  countPill: { alignItems: 'center', backgroundColor: colors.primary100, borderRadius: radius.full, flexDirection: 'row', gap: 4, paddingHorizontal: 9, paddingVertical: 4 },
+  countText: { color: colors.primary700, fontSize: 11, fontWeight: '800' },
   name: { ...type.bodyStrong, color: colors.textPrimary },
-  meta: { ...type.caption, color: colors.textSecondary },
-  empty: { color: colors.textSecondary, marginTop: spacing.xl, textAlign: 'center' },
+  meta: { ...type.caption, color: colors.textSecondary, marginTop: 1 },
   formCard: { gap: spacing.xs, marginTop: spacing.md },
-  formTitle: { ...type.heading, color: colors.primary700, marginBottom: spacing.sm },
+  formHead: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm + 2, marginBottom: spacing.sm },
+  formTitle: { ...type.heading, color: colors.primary700, flex: 1 },
   error: { color: colors.danger, fontSize: type.caption.fontSize, marginBottom: spacing.sm },
   cancel: { alignItems: 'center', marginTop: spacing.sm, padding: spacing.sm },
   cancelText: { color: colors.info, fontSize: type.caption.fontSize + 1, fontWeight: '600' },
