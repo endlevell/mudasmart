@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Badge } from '../../components/ui/badge';
+import { Card } from '../../components/ui/card';
 import { EmptyState } from '../../components/ui/empty-state';
 import { ScreenHeader } from '../../components/ui/screen-header';
 import { Select } from '../../components/ui/select';
@@ -10,7 +11,6 @@ import { attendanceApi, type HistoryItem } from '../../api/attendance.api';
 
 const monthLabel = (month: string) =>
   new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(Number(month.slice(0, 4)), Number(month.slice(5)) - 1));
-
 const lastMonths = (count: number) => {
   const now = new Date();
   return Array.from({ length: count }, (_, index) => {
@@ -26,16 +26,27 @@ const timeLabel = (ms: number) =>
   new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms));
 
 type Row = { key: string; kind: 'record'; item: HistoryItem } | { key: string; kind: 'absent'; date: string };
+type DayStatus = 'hadir' | 'telat' | 'alfa';
 
-// Riwayat bulanan — hari bersesi tanpa record ditandai Tidak Hadir.
+const WEEKDAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+// Riwayat bulanan — kalender warna per hari + daftar detail.
 export default function RiwayatScreen() {
   const [month, setMonth] = useState(lastMonths(12)[0].value);
   const [rows, setRows] = useState<Row[]>([]);
+  const [byDate, setByDate] = useState<Map<string, DayStatus>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       const result = await attendanceApi.history(month);
+      const statusByDate = new Map<string, DayStatus>();
+      result.data.forEach((item) => statusByDate.set(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date(item.scannedAt)), item.status));
+      result.sessionDates.forEach((date) => {
+        if (!statusByDate.has(date)) statusByDate.set(date, 'alfa');
+      });
+      setByDate(statusByDate);
+
       const recordedDays = new Set(result.data.map((item) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date(item.scannedAt))));
       const absent: Row[] = result.sessionDates
         .filter((date) => !recordedDays.has(date))
@@ -52,50 +63,134 @@ export default function RiwayatScreen() {
     void load();
   }, [load]);
 
+  // Statistik bulan terpilih.
+  let hadir = 0;
+  let telat = 0;
+  let alfa = 0;
+  byDate.forEach((status) => {
+    if (status === 'hadir') hadir += 1;
+    else if (status === 'telat') telat += 1;
+    else alfa += 1;
+  });
+  const total = hadir + telat + alfa;
+
+  // Sel kalender: offset hari pertama + tanggal dalam bulan.
+  const year = Number(month.slice(0, 4));
+  const monthIndex = Number(month.slice(5)) - 1;
+  const firstOffset = new Date(year, monthIndex, 1).getDay();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const cells: ({ day: number; key: string; status: DayStatus | null } | null)[] = [
+    ...Array.from({ length: firstOffset }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1;
+      const key = `${month}-${String(day).padStart(2, '0')}`;
+      return { day, key, status: byDate.get(key) ?? null };
+    }),
+  ];
+
+  const listHeader = (
+    <View>
+      <Select label="Bulan" onSelect={(value) => setMonth(value)} options={lastMonths(12)} value={month} />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Animated.View entering={FadeInDown.delay(40)}>
+        <Card style={{ marginBottom: spacing.md }}>
+          <View style={styles.summaryHead}>
+            <Text style={styles.summaryTitle}>Ringkasan {monthLabel(month)}</Text>
+            <Text style={styles.summaryPct}>{total > 0 ? Math.round(((hadir + telat) / total) * 100) : 0}% kehadiran</Text>
+          </View>
+
+          {/* Kalender bulan ini */}
+          <View style={styles.weekRow}>
+            {WEEKDAYS.map((day) => (
+              <Text key={day} style={styles.weekday}>
+                {day}
+              </Text>
+            ))}
+          </View>
+          <View style={styles.grid}>
+            {cells.map((cell, index) =>
+              cell ? (
+                <View key={cell.key} style={styles.cellWrap}>
+                  <View
+                    style={[
+                      styles.dayCell,
+                      cell.status === 'hadir' && styles.dayHadir,
+                      cell.status === 'telat' && styles.dayTelat,
+                      cell.status === 'alfa' && styles.dayAlfa,
+                    ]}
+                  >
+                    <Text style={[styles.dayNum, cell.status === 'hadir' || cell.status === 'telat' ? styles.dayNumLight : null]}>{cell.day}</Text>
+                  </View>
+                </View>
+              ) : (
+                <View key={`blank-${index}`} style={styles.cellWrap} />
+              ),
+            )}
+          </View>
+
+          <View style={styles.legendRow}>
+            <Legend color={colors.primary500} label={`Hadir ${hadir}`} />
+            <Legend color={colors.warning} label={`Telat ${telat}`} />
+            <Legend color={colors.danger} label={`Alfa ${alfa}`} />
+          </View>
+        </Card>
+      </Animated.View>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <ScreenHeader title="Riwayat Absensi" subtitle="Rekap kehadiran per bulan" />
       <View style={styles.content}>
-      <Select label="Bulan" onSelect={(value) => setMonth(value)} options={lastMonths(12)} value={month} />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <FlatList
-        contentContainerStyle={{ paddingBottom: 140 }}
-        data={rows}
-        keyExtractor={(item) => item.key}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        renderItem={({ item, index }) =>
-          item.kind === 'record' ? (
-            <Animated.View entering={FadeInDown.delay(index * 40)}>
-            <View style={styles.row}>
-              <View style={styles.dateCol}>
-                <Text style={styles.day}>{dayLabel(item.item.scannedAt).split(',')[0]}</Text>
-                <Text style={styles.dateNum}>{dayLabel(item.item.scannedAt).split(', ')[1]}</Text>
-              </View>
-              <View style={styles.mid}>
-                <Text style={styles.time}>{timeLabel(item.item.scannedAt)} WIB</Text>
-                <Text style={styles.meta}>{item.item.gateName}</Text>
-              </View>
-              <Badge label={item.item.status === 'hadir' ? 'Hadir' : 'Telat'} tone={item.item.status === 'hadir' ? 'success' : 'warning'} />
-            </View>
-            </Animated.View>
-          ) : (
-            <Animated.View entering={FadeInDown.delay(index * 40)}>
-            <View style={[styles.row, styles.absentRow]}>
-              <View style={styles.dateCol}>
-                <Text style={[styles.day, styles.muted]}>{dayLabel(new Date(`${item.date}T00:00:00+07:00`).getTime()).split(',')[0]}</Text>
-                <Text style={[styles.dateNum, styles.muted]}>{dayLabel(new Date(`${item.date}T00:00:00+07:00`).getTime()).split(', ')[1]}</Text>
-              </View>
-              <View style={styles.mid}>
-                <Text style={styles.meta}>Tanpa catatan kehadiran</Text>
-              </View>
-              <Badge label="Tidak Hadir" tone="danger" />
-            </View>
-            </Animated.View>
-          )
-        }
-        ListEmptyComponent={!error ? <EmptyState title="Belum ada data" message="Riwayat absensi bulan ini masih kosong." /> : null}
-      />
+        <FlatList
+          contentContainerStyle={{ paddingBottom: 140 }}
+          data={rows}
+          keyExtractor={(item) => item.key}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ListHeaderComponent={listHeader}
+          renderItem={({ item, index }) =>
+            item.kind === 'record' ? (
+              <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 40)}>
+                <View style={styles.row}>
+                  <View style={styles.dateCol}>
+                    <Text style={styles.day}>{dayLabel(item.item.scannedAt).split(',')[0]}</Text>
+                    <Text style={styles.dateNum}>{dayLabel(item.item.scannedAt).split(', ')[1]}</Text>
+                  </View>
+                  <View style={styles.mid}>
+                    <Text style={styles.time}>{timeLabel(item.item.scannedAt)} WIB</Text>
+                    <Text style={styles.meta}>{item.item.gateName}</Text>
+                  </View>
+                  <Badge label={item.item.status === 'hadir' ? 'Hadir' : 'Telat'} tone={item.item.status === 'hadir' ? 'success' : 'warning'} />
+                </View>
+              </Animated.View>
+            ) : (
+              <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 40)}>
+                <View style={[styles.row, styles.absentRow]}>
+                  <View style={styles.dateCol}>
+                    <Text style={[styles.day, styles.muted]}>{dayLabel(new Date(`${item.date}T00:00:00+07:00`).getTime()).split(',')[0]}</Text>
+                    <Text style={[styles.dateNum, styles.muted]}>{dayLabel(new Date(`${item.date}T00:00:00+07:00`).getTime()).split(', ')[1]}</Text>
+                  </View>
+                  <View style={styles.mid}>
+                    <Text style={styles.meta}>Tanpa catatan kehadiran</Text>
+                  </View>
+                  <Badge label="Tidak Hadir" tone="danger" />
+                </View>
+              </Animated.View>
+            )
+          }
+          ListEmptyComponent={!error ? <EmptyState title="Belum ada data" message="Riwayat absensi bulan ini masih kosong." /> : null}
+        />
       </View>
+    </View>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendDot, { backgroundColor: color }]} />
+      <Text style={styles.legendText}>{label}</Text>
     </View>
   );
 }
@@ -105,6 +200,23 @@ const styles = StyleSheet.create({
   content: { flex: 1, padding: spacing.md },
   error: { color: colors.danger, fontSize: type.caption.fontSize, marginBottom: spacing.sm },
   separator: { height: spacing.sm },
+  summaryHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  summaryTitle: { ...type.heading, color: colors.textPrimary },
+  summaryPct: { ...type.caption, fontWeight: '700', color: colors.primary700 },
+  weekRow: { flexDirection: 'row', marginTop: spacing.md },
+  weekday: { flex: 1, fontSize: 11, fontWeight: '700', color: colors.textSecondary, textAlign: 'center' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.xs },
+  cellWrap: { alignItems: 'center', paddingVertical: 3, width: `${100 / 7}%` },
+  dayCell: { alignItems: 'center', borderColor: 'transparent', borderRadius: radius.full, borderWidth: 1.5, height: 34, justifyContent: 'center', width: 34 },
+  dayHadir: { backgroundColor: colors.primary500 },
+  dayTelat: { backgroundColor: colors.warning },
+  dayAlfa: { backgroundColor: colors.dangerBg, borderColor: colors.danger },
+  dayNum: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
+  dayNumLight: { color: '#FFFFFF', fontWeight: '700' },
+  legendRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
+  legendItem: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  legendDot: { borderRadius: radius.full, height: 8, width: 8 },
+  legendText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   row: {
     alignItems: 'center',
     backgroundColor: colors.background,
