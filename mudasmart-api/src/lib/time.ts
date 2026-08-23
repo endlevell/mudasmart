@@ -23,3 +23,12 @@ export const hhmmToMinutes = (value: string) => {
   const [hour, minute] = value.split(':').map(Number);
   return hour * 60 + minute;
 };
+
+// Konversi TTL ("15m", "12h", "30d") → milidetik. Dipakai env token.
+export const ttlToMs = (value: string): number => {
+  const match = /^(\d+)([mhd])$/.exec(value.trim());
+  if (!match) return 0;
+  const amount = Number(match[1]);
+  const unitMs = { m: 60_000, h: 3_600_000, d: 86_400_000 }[match[2] as 'm' | 'h' | 'd'];
+  return amount * unitMs;
+};

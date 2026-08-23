@@ -1,5 +1,7 @@
 import { db } from '../db';
 import { hashPassword, hashToken, id, newToken, signAccessToken, verifyPassword, type Role } from '../lib/auth';
+import { ttlToMs } from '../lib/time';
+import { env } from '../config/env';
 import { repository, type User } from './repository';
 
 const now = () => Date.now();
@@ -7,7 +9,8 @@ const fail = (status: number, message: string) => Object.assign(new Error(messag
 type DeviceInput = { deviceId: string; platform?: string; model?: string; userAgent: string };
 type Register = DeviceInput & { email: string; password: string; fullName: string; registrationCode: string; nis?: string; nip?: string };
 type Login = DeviceInput & { email: string; password: string };
-const refreshExpiry = () => now() + 30 * 86_400_000;
+// REFRESH_TOKEN_TTL kini benar-benar dipakai (dulu hardcode 30 hari — config mati).
+const refreshExpiry = () => now() + ttlToMs(env.REFRESH_TOKEN_TTL);
 const output = async (user: User, refreshToken: string) => ({ user, accessToken: await signAccessToken(user), refreshToken });
 const issue = (userId: string, deviceId: number, refreshToken: string, familyId = id()) => repository.insertRefresh.run({ id: id(), userId, deviceId, tokenHash: hashToken(refreshToken), familyId, expiresAt: refreshExpiry(), now: now() });
 const deviceFor = (user: User, input: DeviceInput, ip: string) => {
