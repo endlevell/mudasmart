@@ -28,9 +28,6 @@
     "plugins": [
       "expo-router",
       "./plugins/with-android-abis",
-      // configureAndroidBackup: false — workaround bug expo-secure-store 55.0.17:
-      // plugin menulis referensi @xml/secure_store_* ke manifest tanpa membuat file resource-nya,
-      // bikin AAPT resource linking gagal saat build release.
       ["expo-secure-store", { "configureAndroidBackup": false }],
       [
         "expo-build-properties",
