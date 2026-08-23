@@ -9,6 +9,8 @@ import { colors, gradients, radius, shadow, spacing, type } from '../constants/t
 
 export interface TabItem {
   key: string;
+  /** Nama route di Tabs (state.routes[x].name) — sumber kebenaran status aktif. */
+  routeName: string;
   label: string;
   icon: Extract<keyof typeof Ionicons.glyphMap, string>;
   href: string;

@@ -19,7 +19,7 @@ export default function GuruProfilScreen() {
     .toUpperCase();
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.backgroundAlt }} contentContainerStyle={styles.container}>
       <LinearGradient colors={gradientsSafe} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>

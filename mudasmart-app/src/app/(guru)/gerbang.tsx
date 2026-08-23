@@ -73,7 +73,7 @@ export default function KelolaGerbangScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.backgroundAlt }} contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Kelola Gerbang" subtitle="QR absensi & geofence" />
       <View style={styles.content}>
       {error ? <Text style={styles.error}>{error}</Text> : null}

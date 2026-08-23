@@ -113,7 +113,7 @@ export default function DetailMuridScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.backgroundAlt }} contentContainerStyle={styles.container}>
       <Card style={styles.profileCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{student.fullName.slice(0, 1).toUpperCase()}</Text>

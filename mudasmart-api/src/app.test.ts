@@ -417,3 +417,29 @@ test('registration codes: admin CRUD, duplicate rejected, murid blocked', async 
   const murid = await makeMurid();
   expect((await app.request('/api/registration-codes', { headers: bearer(murid.accessToken) })).status).toBe(403);
 });
+
+// ===== Kelola guru (admin) =====
+test('guru management: list, toggle admin, deactivate, self-protection', async () => {
+  const admin = await makeGuru('admin@example.com', true);
+  const other = await makeGuru('other@example.com');
+  const murid = await makeMurid();
+
+  const list = await (await app.request('/api/gurus', { headers: bearer(admin.accessToken) })).json() as { data: Array<{ id: string; isAdmin: boolean }> };
+  expect(list.data.length).toBe(2);
+
+  expect((await app.request('/api/gurus', { headers: bearer(murid.accessToken) })).status).toBe(403);
+  expect((await send('PATCH', `/api/gurus/${admin.user.id}/admin`, { isAdmin: false }, bearer(admin.accessToken))).status).toBe(400);
+  expect((await send('PATCH', `/api/gurus/${murid.user.id}/admin`, { isAdmin: true }, bearer(admin.accessToken))).status).toBe(404);
+
+  const promoted = await send('PATCH', `/api/gurus/${other.user.id}/admin`, { isAdmin: true }, bearer(admin.accessToken));
+  expect(promoted.status).toBe(200);
+  expect(((await promoted.json()) as { data: { isAdmin: boolean } }).data.isAdmin).toBe(true);
+
+  // Admin terakhir tidak bisa dinonaktifkan.
+  await send('PATCH', `/api/gurus/${other.user.id}/admin`, { isAdmin: false }, bearer(other.accessToken));
+  expect((await send('PATCH', `/api/gurus/${admin.user.id}/deactivate`, undefined, bearer(admin.accessToken))).status).toBe(400);
+
+  const off = await send('PATCH', `/api/gurus/${other.user.id}/deactivate`, undefined, bearer(admin.accessToken));
+  expect(off.status).toBe(204);
+  expect((await request('/api/auth/login', { email: 'other@example.com', password: 'password123', deviceId: crypto.randomUUID() })).status).toBe(401);
+});

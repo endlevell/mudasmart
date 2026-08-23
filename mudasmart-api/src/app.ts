@@ -26,6 +26,8 @@ import { dailyQuerySchema, exportQuerySchema, monthlyQuerySchema } from './repor
 import { buildDailyWorkbook, buildMonthlyWorkbook } from './reports/export';
 import { codesService } from './registration-codes/service';
 import { codeParamSchema, createCodeSchema, patchCodeSchema } from './registration-codes/schema';
+import { gurusService } from './gurus/service';
+import { guruIdParamSchema, patchGuruSchema } from './gurus/schema';
 
 const ip = (context: { req: { header(name: string): string | undefined } }) => context.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 const userAgent = (context: { req: { header(name: string): string | undefined } }) => context.req.header('user-agent') ?? 'unknown';
@@ -106,6 +108,11 @@ app.get('/api/attendance/me/today', auth, requireRole('murid'), (context) => con
 app.get('/api/registration-codes', auth, requireAdmin, (context) => context.json({ data: codesService.list() }));
 app.post('/api/registration-codes', auth, requireAdmin, async (context) => context.json({ data: await codesService.create(context.get('auth').id, ip(context), await body(context.req.raw, createCodeSchema)) }, 201));
 app.patch('/api/registration-codes/:code', auth, requireAdmin, async (context) => context.json({ data: await codesService.update(context.get('auth').id, ip(context), parse(context.req.param('code'), codeParamSchema, 'Parameter tidak valid'), await body(context.req.raw, patchCodeSchema)) }));
+
+// ===== Gurus (GURU+ADMIN) =====
+app.get('/api/gurus', auth, requireAdmin, (context) => context.json({ data: gurusService.list() }));
+app.patch('/api/gurus/:id/admin', auth, requireAdmin, async (context) => context.json({ data: await gurusService.setAdmin(context.get('auth').id, ip(context), parse(context.req.param('id'), guruIdParamSchema, 'Parameter tidak valid'), (await body(context.req.raw, patchGuruSchema)).isAdmin === true) }));
+app.patch('/api/gurus/:id/deactivate', auth, requireAdmin, (context) => { gurusService.deactivate(context.get('auth').id, ip(context), parse(context.req.param('id'), guruIdParamSchema, 'Parameter tidak valid')); return context.body(null, 204); });
 
 // ===== Reports (GURU) =====
 app.get('/api/reports/daily', auth, requireRole('guru'), (context) => context.json(reportsService.daily(parse(context.req.query(), dailyQuerySchema, 'Parameter tidak valid'))));

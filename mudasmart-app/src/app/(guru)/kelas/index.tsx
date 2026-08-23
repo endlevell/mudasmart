@@ -63,7 +63,7 @@ export default function KelolaKelasScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.backgroundAlt }} contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Kelola Kelas" subtitle="Daftar kelas & wali kelas" />
       <View style={styles.content}>
       {items.map((item, index) => (

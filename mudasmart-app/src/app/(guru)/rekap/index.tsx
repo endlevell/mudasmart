@@ -66,7 +66,7 @@ export default function RekapScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.backgroundAlt }} contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Rekap Absensi" subtitle="Harian · Bulanan · Export Excel" />
       <View style={styles.content}>
       <View style={styles.tabs}>

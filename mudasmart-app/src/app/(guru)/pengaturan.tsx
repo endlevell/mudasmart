@@ -103,7 +103,7 @@ export default function PengaturanScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.backgroundAlt }} contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Pengaturan" subtitle="Jam absen & kode registrasi" />
       <View style={styles.content}>
       <Card>
