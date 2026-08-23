@@ -30,4 +30,8 @@ writeFileSync(join(OUT_DIR, 'android-icon-foreground.png'), Buffer.from(render(w
 writeFileSync(join(OUT_DIR, 'android-icon-monochrome.png'), Buffer.from(render(whiteMark(1024, 2.7), 1024)));
 writeFileSync(join(OUT_DIR, 'splash-icon.png'), Buffer.from(render(whiteMark(512, 1.5), 512)));
 
+// Background adaptive icon: gradien brand full-bleed (dipakai launcher Android).
+const backgroundSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#073D2C"/><stop offset="1" stop-color="#0B6E4F"/></linearGradient></defs><rect width="1024" height="1024" fill="url(#g)"/></svg>`;
+writeFileSync(join(OUT_DIR, 'android-icon-background.png'), Buffer.from(render(backgroundSvg, 1024)));
+
 console.log('Brand assets generated ✓');
