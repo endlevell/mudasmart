@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="t d">
+  <title id="t">MUDASmart — Hilal &amp; Nur</title>
+  <desc id="d">Sabine besar memeluk kilau cahaya, emblem Islami minimalis.</desc>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16A374"/>
+      <stop offset="1" stop-color="#073D2C"/>
+    </linearGradient>
+    <mask id="cut">
+      <rect width="240" height="240" fill="#fff"/>
+      <circle cx="158" cy="86" r="62" fill="#000"/>
+    </mask>
+  </defs>
+
+  <circle cx="120" cy="128" r="78" fill="url(#grad)" mask="url(#cut)"/>
+
+  <path transform="translate(152 90)" fill="#FFFFFF"
+        d="M0 -26 Q5.5 -5.5 26 0 Q5.5 5.5 0 26 Q-5.5 5.5 -26 0 Q-5.5 -5.5 0 -26 Z"/>
+</svg>

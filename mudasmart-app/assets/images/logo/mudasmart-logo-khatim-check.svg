@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="t d">
+  <title id="t">MUDASmart — Khatim Check</title>
+  <desc id="d">Bintang segi delapan (khatim) dua kotak membulat dengan centang kehadiran di tengah.</desc>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16A374"/>
+      <stop offset="1" stop-color="#0B6E4F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Kotak diputar 45°: empat ujung kardinal -->
+  <rect x="60" y="60" width="120" height="120" rx="30" fill="#16A374" transform="rotate(45 120 120)"/>
+  <!-- Kotak tegak: empat ujung diagonal -->
+  <rect x="60" y="60" width="120" height="120" rx="30" fill="#0B6E4F"/>
+
+  <circle cx="120" cy="120" r="36" fill="#FFFFFF"/>
+  <path d="M103 121 L114 132 L138 106" fill="none" stroke="#0B6E4F" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
