@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { EmptyState } from '../../../components/ui/empty-state';
-import { Select } from '../../../components/ui/select';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
+import { EmptyState } from '../../components/ui/empty-state';
+import { Select } from '../../components/ui/select';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { colors, radius, spacing, type } from '../../../constants/theme';
-import { ScreenHeader } from '../../../components/ui/screen-header';
-import { classesApi, type ClassRoom } from '../../../api/classes.api';
-import { reportsApi, type DailyReport, type MonthlyReport } from '../../../api/reports.api';
-import { useAuthStore } from '../../../store/auth-store';
+import { colors, radius, spacing, type } from '../../constants/theme';
+import { ScreenHeader } from '../../components/ui/screen-header';
+import { classesApi, type ClassRoom } from '../../api/classes.api';
+import { reportsApi, type DailyReport, type MonthlyReport } from '../../api/reports.api';
+import { useAuthStore } from '../../store/auth-store';
 
 const statusTone = (status: string | null): { tone: 'success' | 'warning' | 'danger' | 'neutral'; label: string } => {
   if (status === 'hadir') return { tone: 'success', label: 'Hadir' };
@@ -18,6 +18,23 @@ const statusTone = (status: string | null): { tone: 'success' | 'warning' | 'dan
   if (status === 'tidak hadir') return { tone: 'danger', label: 'Tidak Hadir' };
   return { tone: 'neutral', label: '-' };
 };
+
+const chipTones = {
+  success: { bg: colors.primary100, fg: colors.primary700 },
+  warning: { bg: colors.warningBg, fg: '#B45309' },
+  danger: { bg: colors.dangerBg, fg: colors.danger },
+};
+
+// Chip angka rekap bulanan — muat di baris sendiri agar tidak meluber dari kartu.
+function StatChip({ value, label, tone }: { value: number; label: string; tone: keyof typeof chipTones }) {
+  const palette = chipTones[tone];
+  return (
+    <View style={[styles.chip, { backgroundColor: palette.bg }]}>
+      <Text style={[styles.chipValue, { color: palette.fg }]}>{value}</Text>
+      <Text style={[styles.chipLabel, { color: palette.fg }]}>{label}</Text>
+    </View>
+  );
+}
 
 // Rekap guru — tab Harian/Bulanan + filter kelas + export xlsx.
 export default function RekapScreen() {
@@ -117,15 +134,15 @@ export default function RekapScreen() {
         <Card style={styles.card}>
           <Text style={styles.classTitle}>{monthly.rows.length} murid · {monthly.sessionCount} hari bersesi</Text>
           {monthly.rows.map((row) => (
-            <View key={row.studentId} style={styles.row}>
-              <View>
-                <Text style={styles.name}>{row.fullName}</Text>
+            <View key={row.studentId} style={styles.monthlyRow}>
+              <View style={styles.monthlyHead}>
+                <Text style={[styles.name, styles.nameShrink]}>{row.fullName}</Text>
                 <Text style={styles.meta}>{row.className}</Text>
               </View>
               <View style={styles.countRow}>
-                <Badge label={`${row.hadir} hadir`} tone="success" />
-                <Badge label={`${row.telat} telat`} tone="warning" />
-                <Badge label={`${row.tidakHadir} alfa`} tone="danger" />
+                <StatChip value={row.hadir} label="Hadir" tone="success" />
+                <StatChip value={row.telat} label="Telat" tone="warning" />
+                <StatChip value={row.tidakHadir} label="Alfa" tone="danger" />
               </View>
             </View>
           ))}
@@ -150,7 +167,13 @@ const styles = StyleSheet.create({
   classTitle: { ...type.heading, color: colors.primary700 },
   row: { alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row' },
   name: { ...type.bodyStrong, color: colors.textPrimary },
+  nameShrink: { flexShrink: 1 },
   meta: { ...type.caption, color: colors.textSecondary },
-  countRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  monthlyRow: { gap: 6 },
+  monthlyHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+  countRow: { alignSelf: 'stretch', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chip: { alignItems: 'center', borderRadius: radius.full, columnGap: 3, flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 3 },
+  chipValue: { fontSize: 12, fontWeight: '800' },
+  chipLabel: { fontSize: 11, fontWeight: '600' },
   error: { color: colors.danger, fontSize: type.caption.fontSize },
 });
