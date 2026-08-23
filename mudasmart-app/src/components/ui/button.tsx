@@ -19,17 +19,29 @@ export function Button({ label, onPress, pending = false, disabled = false, vari
 
   const isDanger = variant === 'danger-outline';
   const isGhost = variant === 'ghost';
+  const inactive = disabled || pending;
+
+  // Disabled/pending tampil solid redup — opacity bikin gradien tampak putih tembus pandang.
+  const contentColor = inactive
+    ? isDanger || isGhost
+      ? colors.textSecondary
+      : colors.textInverse
+    : isDanger
+      ? colors.danger
+      : isGhost
+        ? colors.primary700
+        : colors.textInverse;
 
   const content = pending ? (
-    <ActivityIndicator color={isDanger || isGhost ? colors.primary700 : colors.textInverse} />
+    <ActivityIndicator color={contentColor} />
   ) : (
-    <Text style={[styles.label, isDanger && { color: colors.danger }, isGhost && { color: colors.primary700 }]}>{label}</Text>
+    <Text style={[styles.label, { color: contentColor }]}>{label}</Text>
   );
 
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={disabled || pending}
+      disabled={inactive}
       onPress={onPress}
       onPressIn={() => {
         scale.value = withTiming(0.96, { duration: 90 });
@@ -37,18 +49,20 @@ export function Button({ label, onPress, pending = false, disabled = false, vari
       }}
       onPressOut={() => (scale.value = withTiming(1, { duration: 150 }))}
     >
-      <Animated.View style={[styles.base, styles.baseFallback, (disabled || pending) && styles.disabled, animated]}>
+      <Animated.View style={[styles.base, styles.baseFallback, animated]}>
         {variant === 'gradient' ? (
           <LinearGradient
-            colors={gradients.fresh}
+            colors={inactive ? gradients.disabled : gradients.fresh}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[styles.fill, shadow.floating]}
+            style={[styles.fill, inactive ? null : shadow.floating]}
           >
             {content}
           </LinearGradient>
         ) : (
-          <View style={[styles.fill, isDanger ? styles.dangerOutline : isGhost ? styles.ghost : styles.primary]}>{content}</View>
+          <View style={[styles.fill, inactive ? styles.inactiveFill : isDanger ? styles.dangerOutline : isGhost ? styles.ghost : styles.primary]}>
+            {content}
+          </View>
         )}
       </Animated.View>
     </Pressable>
@@ -68,6 +82,6 @@ const styles = StyleSheet.create({
   baseFallback: { backgroundColor: colors.primary700 },
   dangerOutline: { backgroundColor: colors.background, borderWidth: 1.5, borderColor: colors.danger },
   ghost: { backgroundColor: colors.primary100 },
-  disabled: { opacity: 0.45 },
+  inactiveFill: { backgroundColor: colors.borderStrong },
   label: { color: colors.textInverse, fontSize: type.bodyStrong.fontSize, fontWeight: '800', letterSpacing: 0.2 },
 });

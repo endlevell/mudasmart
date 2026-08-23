@@ -65,4 +65,6 @@ export const type = {
 export const gradients = {
   brand: ['#073D2C', '#0B6E4F'],
   fresh: ['#0B6E4F', '#16A374'],
+  // Solid abu-abu untuk tombol disabled/pending — tanpa transparansi agar tidak "putih pudar".
+  disabled: ['#9CA3AF', '#6B7280'],
 } as const;
