@@ -1,7 +1,7 @@
 import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth-store';
-import { isOnboardingSeen } from '@/utils/secure-storage';
+import { onboardingSeenSync, primeOnboardingFlag } from '@/utils/secure-storage';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -9,24 +9,26 @@ export default function RootLayout() {
   const { session, hydrated, hydrate } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
-  // null = belum dicek; false = first launch; true = sudah pernah buka app.
-  const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  // Flag onboarding dibaca sinkron dari cache; state ini cuma menandai cache sudah di-prime.
+  const [flagPrimed, setFlagPrimed] = useState(false);
 
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    void (async () => setOnboarded(await isOnboardingSeen()))();
-  }, [hydrated]);
+    void (async () => {
+      await primeOnboardingFlag();
+      setFlagPrimed(true);
+    })();
+  }, []);
 
   useEffect(() => {
-    if (!hydrated || onboarded === null) return;
+    if (!hydrated || !flagPrimed) return;
     const inAuth = segments[0] === '(auth)';
     const inOnboarding = segments[0] === 'onboarding';
     if (!session) {
-      if (!onboarded && !inOnboarding) {
+      if (!onboardingSeenSync() && !inOnboarding) {
         router.replace('/onboarding');
       } else if (!inAuth && !inOnboarding) {
         router.replace('/(auth)/login');
@@ -35,7 +37,7 @@ export default function RootLayout() {
       router.replace(session.user.role === 'murid' ? '/(murid)' : '/(guru)');
     }
     SplashScreen.hideAsync().catch(() => {});
-  }, [hydrated, onboarded, session, segments, router]);
+  }, [hydrated, flagPrimed, session, segments, router]);
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }

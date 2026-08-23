@@ -8,16 +8,20 @@ const KEYS = {
   onboardingSeen: 'mudas.onboardingSeen',
 } as const;
 
-// Cache in-memory agar gate di root layout tidak menunggu I/O berulang.
+// Satu sumber kebenaran untuk flag onboarding. Cache diisi sekali saat boot (prime),
+// lalu dibaca sinkron oleh gate di root layout agar tidak ada race saat navigasi.
 let cachedOnboardingSeen: boolean | null = null;
 
-export const isOnboardingSeen = async (): Promise<boolean> => {
-  if (cachedOnboardingSeen !== null) return cachedOnboardingSeen;
-  cachedOnboardingSeen = (await SecureStore.getItemAsync(KEYS.onboardingSeen)) === '1';
-  return cachedOnboardingSeen;
+export const primeOnboardingFlag = async (): Promise<void> => {
+  if (cachedOnboardingSeen === null) {
+    cachedOnboardingSeen = (await SecureStore.getItemAsync(KEYS.onboardingSeen)) === '1';
+  }
 };
 
-export const markOnboardingSeen = async () => {
+export const onboardingSeenSync = (): boolean => cachedOnboardingSeen === true;
+
+export const markOnboardingSeen = async (): Promise<void> => {
+  // Set cache dulu (sinkron) sebelum tulis storage — gate langsung tahu tanpa menunggu I/O.
   cachedOnboardingSeen = true;
   await SecureStore.setItemAsync(KEYS.onboardingSeen, '1');
 };
