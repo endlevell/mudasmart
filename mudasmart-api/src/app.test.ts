@@ -392,3 +392,15 @@ test('security headers present on responses', async () => {
   const response = await app.request('/api/health');
   expect(response.headers.get('x-content-type-options')).toBe('nosniff');
 });
+
+test('guru can log in on a device already bound to a murid', async () => {
+  const deviceId = crypto.randomUUID();
+  await request('/api/auth/register', { email: 'murid@example.com', password: 'password123', fullName: 'Murid', registrationCode: 'MURID', deviceId, nis: '900' });
+  await request('/api/auth/register', { email: 'guru@example.com', password: 'password123', fullName: 'Guru', registrationCode: 'GURU', deviceId: crypto.randomUUID() });
+  const guru = await request('/api/auth/login', { email: 'guru@example.com', password: 'password123', deviceId });
+  expect(guru.status).toBe(200);
+  // Refresh guru tetap terikat ke baris device miliknya sendiri.
+  const session = (await guru.json()) as { refreshToken: string };
+  const rotated = await request('/api/auth/refresh', { refreshToken: session.refreshToken, deviceId });
+  expect(rotated.status).toBe(200);
+});

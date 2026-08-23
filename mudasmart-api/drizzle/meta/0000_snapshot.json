@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "55064ada-0f89-4c2c-9422-82549e1e901b",
+  "id": "5e553fd5-377b-4e20-b308-791d5d5e1d5e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "attendance_config": {
@@ -599,15 +599,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "devices_device_id_unique": {
-          "name": "devices_device_id_unique",
-          "columns": [
-            "device_id"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "devices_user_id_users_id_fk": {
           "name": "devices_user_id_users_id_fk",

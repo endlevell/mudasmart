@@ -12,10 +12,9 @@ const output = async (user: User, refreshToken: string) => ({ user, accessToken:
 const issue = (userId: string, deviceId: number, refreshToken: string, familyId = id()) => repository.insertRefresh.run({ id: id(), userId, deviceId, tokenHash: hashToken(refreshToken), familyId, expiresAt: refreshExpiry(), now: now() });
 const deviceFor = (user: User, input: DeviceInput, ip: string) => {
   const current = repository.deviceByUser.all({ userId: user.id })[0];
-  // deviceId NULL berarti belum/sudah di-reset — murid boleh bind ulang.
+  // Murid terkunci ke satu device aktif; deviceId NULL berarti belum/di-reset → boleh bind ulang.
+  // Guru bebas login dari device mana pun. Satu device boleh dipakai beberapa akun.
   if (user.role === 'murid' && current && current.deviceId !== null && current.deviceId !== input.deviceId) throw fail(403, 'Perangkat tidak diizinkan');
-  const existing = repository.deviceById.get({ deviceId: input.deviceId });
-  if (existing && existing.userId !== user.id) throw fail(403, 'Perangkat tidak diizinkan');
   if (current && current.userAgent !== input.userAgent) repository.log(user.id, 'user_agent_mismatch', ip, { deviceId: input.deviceId });
   if (current) { repository.touchDevice.run({ id: current.id, deviceId: input.deviceId, platform: input.platform ?? null, model: input.model ?? null, userAgent: input.userAgent, now: now() }); return current.id; }
   return repository.insertDevice.get({ userId: user.id, deviceId: input.deviceId, platform: input.platform ?? null, model: input.model ?? null, userAgent: input.userAgent, now: now() })!.id;
@@ -58,8 +57,9 @@ export const authService = {
       db.transaction(() => repository.revokeToken.run({ tokenHash: hashToken(input.refreshToken), now: now() }));
       throw fail(401, 'Refresh token tidak valid');
     }
-    const device = repository.deviceById.get({ deviceId: input.deviceId });
-    if (!device || device.id !== stored.deviceId || device.userId !== user.id || stored.expiresAt <= now()) {
+    // Token refresh terikat ke baris device milik user ini (deviceId string kini bisa dipakai bersama antar akun).
+    const device = repository.deviceByUser.all({ userId: user.id })[0];
+    if (!device || device.id !== stored.deviceId || device.deviceId !== input.deviceId || stored.expiresAt <= now()) {
       db.transaction(() => repository.revokeToken.run({ tokenHash: hashToken(input.refreshToken), now: now() }));
       throw fail(401, 'Refresh token tidak valid');
     }
