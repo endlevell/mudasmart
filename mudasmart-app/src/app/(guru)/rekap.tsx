@@ -36,7 +36,34 @@ function StatChip({ value, label, tone }: { value: number; label: string; tone: 
   );
 }
 
-// Rekap guru — tab Harian/Bulanan + filter kelas + export xlsx.
+interface ClassRate {
+  name: string;
+  hadirPct: number;
+  telatPct: number;
+  pct: number;
+}
+
+// Grafik batang horizontal-scroll — persentase kehadiran per kelas bulan ini.
+function ClassBarChart({ data }: { data: ClassRate[] }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chartScroll}>
+      {data.map((item) => (
+        <View key={item.name} style={styles.chartCol}>
+          <Text style={styles.chartValue}>{item.pct}%</Text>
+          <View style={styles.chartTrack}>
+            {item.hadirPct > 0 ? <View style={[styles.chartSegHadir, { flex: item.hadirPct }]} /> : null}
+            {item.telatPct > 0 ? <View style={[styles.chartSegTelat, { flex: item.telatPct }]} /> : null}
+          </View>
+          <Text numberOfLines={2} style={styles.chartLabel}>
+            {item.name}
+          </Text>
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+// Rekap guru — tab Harian/Bulanan + grafik + filter kelas + export xlsx.
 export default function RekapScreen() {
   const accessToken = useAuthStore((state) => state.session?.accessToken);
   const [tab, setTab] = useState<'daily' | 'monthly'>('daily');
@@ -82,74 +109,166 @@ export default function RekapScreen() {
     }
   };
 
+  // Ringkasan harian dari data kelas yang sudah dimuat.
+  let dailyHadir = 0;
+  let dailyTelat = 0;
+  let dailyTotal = 0;
+  if (daily) {
+    for (const cls of daily.classes) {
+      for (const student of cls.students) {
+        dailyTotal += 1;
+        if (student.status === 'hadir') dailyHadir += 1;
+        else if (student.status === 'telat') dailyTelat += 1;
+      }
+    }
+  }
+  const dailyPresent = dailyHadir + dailyTelat;
+
+  // Grafik bulanan: persentase kehadiran per kelas.
+  const classRates: ClassRate[] = [];
+  if (monthly && monthly.sessionCount > 0) {
+    const grouped = new Map<string, { hadir: number; telat: number; students: number }>();
+    for (const row of monthly.rows) {
+      const entry = grouped.get(row.className) ?? { hadir: 0, telat: 0, students: 0 };
+      entry.hadir += row.hadir;
+      entry.telat += row.telat;
+      entry.students += 1;
+      grouped.set(row.className, entry);
+    }
+    grouped.forEach((entry, name) => {
+      const expected = entry.students * monthly.sessionCount;
+      const hadirPct = Math.round((entry.hadir / expected) * 100);
+      const telatPct = Math.round((entry.telat / expected) * 100);
+      classRates.push({ name, hadirPct, telatPct, pct: Math.min(100, hadirPct + telatPct) });
+    });
+    classRates.sort((a, b) => b.pct - a.pct);
+  }
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.backgroundAlt }} contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Rekap Absensi" subtitle="Harian · Bulanan · Export Excel" />
       <View style={styles.content}>
-      <View style={styles.tabs}>
-        {(['daily', 'monthly'] as const).map((value) => (
-          <Pressable key={value} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabActive]}>
-            <Text style={[styles.tabText, tab === value && styles.tabTextActive]}>{value === 'daily' ? 'Harian' : 'Bulanan'}</Text>
-          </Pressable>
-        ))}
-      </View>
+        <View style={styles.tabs}>
+          {(['daily', 'monthly'] as const).map((value) => (
+            <Pressable key={value} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabActive]}>
+              <Text style={[styles.tabText, tab === value && styles.tabTextActive]}>{value === 'daily' ? 'Harian' : 'Bulanan'}</Text>
+            </Pressable>
+          ))}
+        </View>
 
-      <Select
-        label="Filter Kelas"
-        onSelect={(value) => setClassId(value)}
-        options={[{ label: 'Semua Kelas', value: '' }, ...classes.map((c) => ({ label: c.name, value: String(c.id) }))]}
-        placeholder="Semua Kelas"
-        value={classId ?? ''}
-      />
+        <Select
+          label="Filter Kelas"
+          onSelect={(value) => setClassId(value)}
+          options={[{ label: 'Semua Kelas', value: '' }, ...classes.map((c) => ({ label: c.name, value: String(c.id) }))]}
+          placeholder="Semua Kelas"
+          value={classId ?? ''}
+        />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {tab === 'daily' && daily ? (
-        daily.classes.length === 0 ? (
-          <EmptyState title="Belum ada murid" message="Tambahkan murid dan assign kelas terlebih dahulu." />
-        ) : (
-          daily.classes.map((cls, index) => (
-            <Animated.View key={String(cls.classId)} entering={FadeInDown.delay(index * 60)}>
-              <Card style={styles.card}>
-                <Text style={styles.classTitle}>{cls.className}</Text>
-                {cls.students.map((student) => {
-                  const badge = statusTone(student.status);
-                  return (
-                    <View key={student.id} style={styles.row}>
-                      <View>
-                        <Text style={styles.name}>{student.fullName}</Text>
-                        <Text style={styles.meta}>NIS {student.nis}</Text>
-                      </View>
-                      <Badge label={badge.label} tone={badge.tone} />
+        {tab === 'daily' && daily ? (
+          daily.classes.length === 0 ? (
+            <EmptyState title="Belum ada murid" message="Tambahkan murid dan assign kelas terlebih dahulu." />
+          ) : (
+            <>
+              <Animated.View entering={FadeInDown.delay(40)}>
+                <Card>
+                  <View style={styles.summaryHead}>
+                    <Text style={styles.classTitle}>Ringkasan Hari Ini</Text>
+                    <Text style={styles.summaryPct}>{Math.round((dailyPresent / Math.max(dailyTotal, 1)) * 100)}% absen</Text>
+                  </View>
+                  <View style={styles.bigRow}>
+                    <Text style={styles.bigValue}>{dailyPresent}</Text>
+                    <Text style={styles.bigLabel}>dari {dailyTotal} murid sudah scan</Text>
+                  </View>
+                  <View style={styles.trackBar}>
+                    {dailyHadir > 0 ? <View style={[styles.segHadir, { flex: dailyHadir }]} /> : null}
+                    {dailyTelat > 0 ? <View style={[styles.segTelat, { flex: dailyTelat }]} /> : null}
+                  </View>
+                  <View style={styles.legendRow}>
+                    <Text style={styles.legendItem}>
+                      <Text style={styles.legendDotHadir}>● </Text>Hadir {dailyHadir}
+                    </Text>
+                    <Text style={styles.legendItem}>
+                      <Text style={styles.legendDotTelat}>● </Text>Telat {dailyTelat}
+                    </Text>
+                    <Text style={styles.legendItem}>
+                      <Text style={styles.legendDotBelum}>● </Text>Belum {dailyTotal - dailyPresent}
+                    </Text>
+                  </View>
+                </Card>
+              </Animated.View>
+
+              {daily.classes.map((cls, index) => (
+                <Animated.View key={String(cls.classId)} entering={FadeInDown.delay(index * 60)}>
+                  <Card style={styles.card}>
+                    <View style={styles.classHead}>
+                      <Text style={styles.classTitle}>{cls.className}</Text>
+                      <Text style={styles.classCount}>{cls.students.length} murid</Text>
                     </View>
-                  );
-                })}
+                    {cls.students.map((student) => {
+                      const badge = statusTone(student.status);
+                      return (
+                        <View key={student.id} style={styles.row}>
+                          <View>
+                            <Text style={styles.name}>{student.fullName}</Text>
+                            <Text style={styles.meta}>NIS {student.nis}</Text>
+                          </View>
+                          <Badge label={badge.label} tone={badge.tone} />
+                        </View>
+                      );
+                    })}
+                  </Card>
+                </Animated.View>
+              ))}
+            </>
+          )
+        ) : null}
+
+        {tab === 'monthly' && monthly ? (
+          <>
+            {classRates.length > 0 ? (
+              <Animated.View entering={FadeInDown.delay(40)}>
+                <Card>
+                  <View style={styles.summaryHead}>
+                    <Text style={styles.classTitle}>Grafik Kehadiran per Kelas</Text>
+                    <Text style={styles.classCount}>{monthly.sessionCount} hari bersesi</Text>
+                  </View>
+                  <ClassBarChart data={classRates} />
+                  <View style={styles.legendRow}>
+                    <Text style={styles.legendItem}>
+                      <Text style={styles.legendDotHadir}>● </Text>Hadir
+                    </Text>
+                    <Text style={styles.legendItem}>
+                      <Text style={styles.legendDotTelat}>● </Text>Telat
+                    </Text>
+                  </View>
+                </Card>
+              </Animated.View>
+            ) : null}
+
+            <Animated.View entering={FadeInDown.delay(90)}>
+              <Card style={styles.card}>
+                <Text style={styles.classTitle}>{monthly.rows.length} murid · {monthly.sessionCount} hari bersesi</Text>
+                {monthly.rows.map((row) => (
+                  <View key={row.studentId} style={styles.monthlyRow}>
+                    <View style={styles.monthlyHead}>
+                      <Text style={[styles.name, styles.nameShrink]}>{row.fullName}</Text>
+                      <Text style={styles.meta}>{row.className}</Text>
+                    </View>
+                    <View style={styles.countRow}>
+                      <StatChip value={row.hadir} label="Hadir" tone="success" />
+                      <StatChip value={row.telat} label="Telat" tone="warning" />
+                      <StatChip value={row.tidakHadir} label="Alfa" tone="danger" />
+                    </View>
+                  </View>
+                ))}
               </Card>
             </Animated.View>
-          ))
-        )
-      ) : null}
+          </>
+        ) : null}
 
-      {tab === 'monthly' && monthly ? (
-        <Card style={styles.card}>
-          <Text style={styles.classTitle}>{monthly.rows.length} murid · {monthly.sessionCount} hari bersesi</Text>
-          {monthly.rows.map((row) => (
-            <View key={row.studentId} style={styles.monthlyRow}>
-              <View style={styles.monthlyHead}>
-                <Text style={[styles.name, styles.nameShrink]}>{row.fullName}</Text>
-                <Text style={styles.meta}>{row.className}</Text>
-              </View>
-              <View style={styles.countRow}>
-                <StatChip value={row.hadir} label="Hadir" tone="success" />
-                <StatChip value={row.telat} label="Telat" tone="warning" />
-                <StatChip value={row.tidakHadir} label="Alfa" tone="danger" />
-              </View>
-            </View>
-          ))}
-        </Card>
-      ) : null}
-
-      <Button label="Export ke Excel" onPress={() => void exportReport()} pending={pending} />
+        <Button label="Export ke Excel" onPress={() => void exportReport()} pending={pending} />
       </View>
     </ScrollView>
   );
@@ -165,6 +284,8 @@ const styles = StyleSheet.create({
   tabTextActive: { color: colors.textInverse },
   card: { gap: spacing.sm },
   classTitle: { ...type.heading, color: colors.primary700 },
+  classHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  classCount: { ...type.caption, fontWeight: '600', color: colors.textSecondary },
   row: { alignItems: 'center', justifyContent: 'space-between', flexDirection: 'row' },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   nameShrink: { flexShrink: 1 },
@@ -175,5 +296,39 @@ const styles = StyleSheet.create({
   chip: { alignItems: 'center', borderRadius: radius.full, columnGap: 3, flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 3 },
   chipValue: { fontSize: 12, fontWeight: '800' },
   chipLabel: { fontSize: 11, fontWeight: '600' },
+  summaryHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  summaryPct: { ...type.caption, fontWeight: '700', color: colors.primary700 },
+  bigRow: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  bigValue: { fontSize: 40, fontWeight: '800', color: colors.primary700, lineHeight: 44 },
+  bigLabel: { ...type.body, color: colors.textSecondary, paddingBottom: 6 },
+  trackBar: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.full,
+    flexDirection: 'row',
+    height: 10,
+    marginTop: spacing.md,
+    overflow: 'hidden',
+  },
+  segHadir: { backgroundColor: colors.primary500 },
+  segTelat: { backgroundColor: colors.warning },
+  legendRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm },
+  legendItem: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  legendDotHadir: { color: colors.primary500 },
+  legendDotTelat: { color: colors.warning },
+  legendDotBelum: { color: colors.borderStrong },
+  chartScroll: { marginTop: spacing.md },
+  chartCol: { alignItems: 'center', minWidth: 64, paddingHorizontal: spacing.xs },
+  chartValue: { fontSize: 12, fontWeight: '800', color: colors.primary700, marginBottom: 4 },
+  chartTrack: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.sm,
+    flexDirection: 'column-reverse',
+    height: 120,
+    overflow: 'hidden',
+    width: 28,
+  },
+  chartSegHadir: { backgroundColor: colors.primary500 },
+  chartSegTelat: { backgroundColor: colors.warning },
+  chartLabel: { fontSize: 10, fontWeight: '600', color: colors.textSecondary, marginTop: 6, textAlign: 'center' },
   error: { color: colors.danger, fontSize: type.caption.fontSize },
 });
