@@ -198,31 +198,31 @@ export default function GuruDashboard() {
           </Card>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(140)} style={styles.quickRow}>
-          <PressableScale onPress={() => router.navigate('/(guru)/rekap')} style={{ flex: 1 }}>
-            <View style={styles.quickTile}>
-              <View style={styles.quickIcon}>
-                <Ionicons name="stats-chart-outline" size={18} color={colors.primary700} />
+        <Animated.View entering={FadeInDown.delay(140)}>
+          <View style={styles.quickRow}>
+            <PressableScale onPress={() => router.navigate('/(guru)/rekap')} style={{ flex: 1 }}>
+              <View style={styles.quickTile}>
+                <View style={styles.quickIcon}>
+                  <Ionicons name="stats-chart-outline" size={18} color={colors.primary700} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={1} style={styles.quickTitle}>Rekap</Text>
+                  <Text numberOfLines={1} style={styles.quickSub}>Harian & bulanan</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.quickTitle}>Rekap Absensi</Text>
-                <Text style={styles.quickSub}>Harian & bulanan</Text>
+            </PressableScale>
+            <PressableScale onPress={() => router.navigate('/(guru)/murid')} style={{ flex: 1 }}>
+              <View style={styles.quickTile}>
+                <View style={styles.quickIcon}>
+                  <Ionicons name="people-outline" size={18} color={colors.primary700} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={1} style={styles.quickTitle}>Data Murid</Text>
+                  <Text numberOfLines={1} style={styles.quickSub}>Kelola siswa</Text>
+                </View>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary500} />
-            </View>
-          </PressableScale>
-          <PressableScale onPress={() => router.navigate('/(guru)/murid')} style={{ flex: 1 }}>
-            <View style={styles.quickTile}>
-              <View style={styles.quickIcon}>
-                <Ionicons name="people-outline" size={18} color={colors.primary700} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.quickTitle}>Data Murid</Text>
-                <Text style={styles.quickSub}>Kelola siswa</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary500} />
-            </View>
-          </PressableScale>
+            </PressableScale>
+          </View>
         </Animated.View>
       </View>
     </ScrollView>
@@ -313,6 +313,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     flexDirection: 'row',
     gap: spacing.sm + 2,
+    minHeight: 68,
     padding: spacing.md,
     ...{
       shadowColor: '#0B3D2C',
