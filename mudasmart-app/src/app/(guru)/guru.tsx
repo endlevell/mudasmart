@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
 import { EmptyState } from '../../components/ui/empty-state';
 import { PressableScale } from '../../components/ui/pressable-scale';
@@ -39,6 +39,25 @@ const actionTones = {
   neutral: { bg: colors.surfaceMuted, fg: colors.textSecondary },
   danger: { bg: colors.dangerBg, fg: colors.danger },
 };
+
+function RolePill({ isAdmin }: { isAdmin: boolean }) {
+  return (
+    <View style={[styles.pill, { backgroundColor: isAdmin ? colors.infoBg : colors.surfaceMuted }]}>
+      <Ionicons name={isAdmin ? 'shield-checkmark' : 'person'} size={11} color={isAdmin ? colors.info : colors.textSecondary} />
+      <Text style={[styles.pillText, { color: isAdmin ? colors.info : colors.textSecondary }]}>{isAdmin ? 'Admin' : 'Guru'}</Text>
+    </View>
+  );
+}
+
+// Status pill hanya tampil saat nonaktif — status aktif sudah terlihat dari dot avatar.
+function StatusPill() {
+  return (
+    <View style={[styles.pill, { backgroundColor: colors.dangerBg }]}>
+      <View style={[styles.pillDot, { backgroundColor: colors.danger }]} />
+      <Text style={[styles.pillText, { color: colors.danger }]}>Nonaktif</Text>
+    </View>
+  );
+}
 
 // Tombol aksi pill — pengganti teks polos.
 function PillAction({ label, tone, onPress }: { label: string; tone: keyof typeof actionTones; onPress: () => void }) {
@@ -142,7 +161,10 @@ export default function KelolaGuruScreen() {
           <Animated.View key={guru.id} entering={FadeInDown.delay(index * 50)}>
             <Card>
               <View style={styles.row}>
-                <Avatar fullName={guru.fullName} isAdmin={guru.isAdmin} isActive={guru.isActive} />
+                <View style={styles.avatarWrap}>
+                  <Avatar fullName={guru.fullName} isAdmin={guru.isAdmin} isActive={guru.isActive} />
+                  <View style={[styles.statusDot, { backgroundColor: guru.isActive ? colors.primary500 : colors.danger }]} />
+                </View>
                 <View style={styles.info}>
                   <View style={styles.nameRow}>
                     <Text style={styles.name} numberOfLines={1}>
@@ -154,12 +176,15 @@ export default function KelolaGuruScreen() {
                       </View>
                     ) : null}
                   </View>
-                  <Text style={styles.meta} numberOfLines={1}>
-                    {guru.email}
-                  </Text>
+                  <View style={styles.emailRow}>
+                    <Ionicons name="mail-outline" size={13} color={colors.textSecondary} />
+                    <Text style={styles.meta} numberOfLines={1}>
+                      {guru.email}
+                    </Text>
+                  </View>
                   <View style={styles.badges}>
-                    <Badge label={guru.isAdmin ? 'Admin' : 'Guru'} tone={guru.isAdmin ? 'info' : 'neutral'} />
-                    {!guru.isActive ? <Badge label="Nonaktif" tone="danger" /> : null}
+                    <RolePill isAdmin={guru.isAdmin} />
+                    {!guru.isActive ? <StatusPill /> : null}
                   </View>
                 </View>
               </View>
@@ -204,6 +229,17 @@ const styles = StyleSheet.create({
   miniStatValue: { fontSize: type.title.fontSize, fontWeight: '800', color: colors.primary700 },
   miniStatLabel: { ...type.caption, color: colors.textSecondary },
   row: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  avatarWrap: { position: 'relative' },
+  statusDot: {
+    borderColor: colors.background,
+    borderRadius: radius.full,
+    borderWidth: 2,
+    bottom: -1,
+    height: 14,
+    position: 'absolute',
+    right: -1,
+    width: 14,
+  },
   avatar: { alignItems: 'center', borderRadius: radius.full, height: 48, justifyContent: 'center', width: 48 },
   avatarText: { fontSize: 16, fontWeight: '800', color: colors.textInverse, letterSpacing: 0.5 },
   avatarInfo: { backgroundColor: colors.infoBg },
@@ -214,8 +250,12 @@ const styles = StyleSheet.create({
   name: { ...type.bodyStrong, color: colors.textPrimary, flexShrink: 1 },
   youTag: { backgroundColor: colors.primary100, borderRadius: radius.full, paddingHorizontal: 7, paddingVertical: 2 },
   youTagText: { fontSize: 10, fontWeight: '800', color: colors.primary700 },
-  meta: { ...type.caption, color: colors.textSecondary },
+  meta: { ...type.caption, color: colors.textSecondary, flexShrink: 1 },
+  emailRow: { alignItems: 'center', flexDirection: 'row', gap: 5, marginTop: 1 },
   badges: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs },
+  pill: { alignItems: 'center', borderRadius: radius.full, flexDirection: 'row', gap: 4, paddingHorizontal: 9, paddingVertical: 4 },
+  pillDot: { borderRadius: radius.full, height: 6, width: 6 },
+  pillText: { fontSize: 11, fontWeight: '700' },
   divider: { backgroundColor: colors.border, height: StyleSheet.hairlineWidth, marginTop: spacing.md },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm + 2 },
   actionPill: { alignItems: 'center', borderRadius: radius.full, paddingVertical: 9 },
