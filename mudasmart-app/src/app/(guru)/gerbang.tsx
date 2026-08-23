@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/ui/button';
@@ -37,6 +38,7 @@ function QrCard({ gate, size }: { gate: Gate; size: number }) {
 
 // Admin only — render QR untuk dicetak, regenerasi, geofence opsional.
 export default function KelolaGerbangScreen() {
+  const insets = useSafeAreaInsets();
   const [gates, setGates] = useState<Gate[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -178,10 +180,18 @@ export default function KelolaGerbangScreen() {
         </Animated.View>
       </View>
 
-      {/* Viewer fullscreen — kartu QR branded, bisa dibagikan/disimpan sebagai PNG. */}
-      <Modal animationType="fade" onRequestClose={() => setViewer(null)} visible={viewer !== null}>
+      {/* Viewer fullscreen — kartu QR branded, bisa dibagikan/disimpan sebagai PNG.
+          statusBarTranslucent/navigationBarTranslucent wajib agar menutupi seluruh layar di Android. */}
+      <Modal
+        animationType="fade"
+        hardwareAccelerated
+        navigationBarTranslucent
+        onRequestClose={() => setViewer(null)}
+        statusBarTranslucent
+        visible={viewer !== null}
+      >
         <LinearGradient colors={['#073D2C', '#04231A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.viewerBg}>
-          <View style={styles.viewerTop}>
+          <View style={[styles.viewerTop, { paddingTop: insets.top + spacing.sm }]}>
             <View style={styles.viewerHeading}>
               <Ionicons name="business-outline" size={18} color={colors.primary300} />
               <Text numberOfLines={1} style={styles.viewerTitle}>{viewer?.name}</Text>
@@ -199,7 +209,7 @@ export default function KelolaGerbangScreen() {
                 </View>
                 <Text style={styles.viewerHint}>Bagikan atau simpan kartu ini untuk dicetak & dipasang di gerbang.</Text>
               </ScrollView>
-              <View style={styles.viewerActions}>
+              <View style={[styles.viewerActions, { paddingBottom: insets.bottom + spacing.lg }]}>
                 <Button label={savingQr ? 'Menyiapkan...' : 'Simpan / Bagikan QR'} onPress={() => void shareQr()} pending={savingQr} />
               </View>
             </>
@@ -233,13 +243,13 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: type.caption.fontSize },
 
   viewerBg: { flex: 1 },
-  viewerTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.xxl },
+  viewerTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm + 2, justifyContent: 'space-between', paddingHorizontal: spacing.lg },
   viewerHeading: { alignItems: 'center', flexDirection: 'row', flex: 1, gap: spacing.sm + 2, marginRight: spacing.md },
   viewerTitle: { ...type.title, color: colors.textInverse, flexShrink: 1 },
   viewerClose: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: radius.full, height: 38, justifyContent: 'center', width: 38 },
   viewerScroll: { alignItems: 'center', flexGrow: 1, justifyContent: 'center', padding: spacing.lg },
   viewerHint: { ...type.caption, color: 'rgba(255,255,255,0.65)', marginTop: spacing.lg, textAlign: 'center' },
-  viewerActions: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
+  viewerActions: { paddingHorizontal: spacing.lg },
 
   printCard: { backgroundColor: '#FFFFFF', borderRadius: radius.xl, overflow: 'hidden', width: 320, ...shadow.floating },
   printHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2 },
