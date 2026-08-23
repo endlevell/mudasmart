@@ -3,16 +3,26 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 import { authApi } from '../api/auth.api';
 
-// Handler tampilan notifikasi saat app terbuka (foreground).
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
-});
+// Expo Go (SDK 53+) melempar error untuk sebagian besar API notifications.
+// Semua pemanggilan dibungkus guard — kegagalannya TIDAK BOLEH membuat modul
+// layar gagal dievaluasi (itu penyebab route unmatched).
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+if (!isExpoGo) {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
+    });
+  } catch {
+    // abaikan — lingkungan tidak mendukung
+  }
+}
 
 /** Minta izin, ambil Expo push token, dan daftarkan ke server (murid). */
 export async function registerForPush(): Promise<void> {
   try {
     // Remote push sudah tidak ada di Expo Go (SDK 53+) — hanya build asli.
-    if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return;
+    if (isExpoGo) return;
 
     const settings = await Notifications.getPermissionsAsync();
     let granted = settings.granted;
