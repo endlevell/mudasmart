@@ -106,7 +106,7 @@ export default function ScanScreen() {
             <Pressable onPress={() => router.navigate('/(murid)')} style={styles.topButton}>
               <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
             </Pressable>
-            <View>
+            <View style={styles.topTitles}>
               <Text style={styles.topTitle}>Scan Absensi</Text>
               <Text style={styles.topSub}>Gerbang SMA Muhammadiyah 2</Text>
             </View>
@@ -139,8 +139,8 @@ export default function ScanScreen() {
 
           <View style={{ flex: 1 }} />
 
-          {/* Kartu panduan */}
-          <View style={[styles.guideCard, { marginBottom: insets.bottom + spacing.lg }]}>
+          {/* Kartu panduan — diangkat di atas floating navbar */}
+          <View style={[styles.guideCard, { marginBottom: insets.bottom + 118 }]}>
             <View style={styles.guideRow}>
               <Ionicons name="location" size={15} color={colors.primary300} />
               <Text style={styles.guideText}>GPS aktif membuat absensi terverifikasi.</Text>
@@ -204,8 +204,9 @@ const styles = StyleSheet.create({
   permissionHint: { ...type.body, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
   camera: { flex: 1 },
   overlay: { backgroundColor: 'rgba(7,18,14,0.55)', flex: 1 },
-  topBar: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.lg },
+  topBar: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, justifyContent: 'space-between', paddingHorizontal: spacing.lg },
   topButton: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: radius.full, height: 40, justifyContent: 'center', width: 40 },
+  topTitles: { alignItems: 'center', flex: 1 },
   torchOn: { backgroundColor: 'rgba(245,158,11,0.25)' },
   topTitle: { ...type.heading, color: '#FFFFFF' },
   topSub: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.65)' },
