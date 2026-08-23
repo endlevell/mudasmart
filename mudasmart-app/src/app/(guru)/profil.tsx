@@ -43,7 +43,9 @@ export default function GuruProfilScreen() {
         ) : null}
       </Card>
 
-      <Button label="Keluar" onPress={() => void logout()} variant="ghost" />
+      <View style={{ alignItems: 'center' }}>
+        <Button label="Keluar" onPress={() => void logout()} variant="ghost" />
+      </View>
     </ScrollView>
   );
 }

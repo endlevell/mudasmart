@@ -35,7 +35,9 @@ export default function MuridProfilScreen() {
         <MenuItem label="Riwayat Absensi" sub="Rekap per bulan" onPress={() => router.navigate('/(murid)/riwayat')} />
       </Card>
 
-      <Button label="Keluar" onPress={() => void logout()} variant="ghost" />
+      <View style={{ alignItems: 'center' }}>
+        <Button label="Keluar" onPress={() => void logout()} variant="ghost" />
+      </View>
     </ScrollView>
   );
 }

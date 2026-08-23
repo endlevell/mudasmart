@@ -5,7 +5,9 @@ import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { Select } from '../../../components/ui/select';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, radius, spacing, type } from '../../../constants/theme';
+import { ScreenHeader } from '../../../components/ui/screen-header';
 import { classesApi, type ClassRoom } from '../../../api/classes.api';
 import { reportsApi, type DailyReport, type MonthlyReport } from '../../../api/reports.api';
 import { useAuthStore } from '../../../store/auth-store';
@@ -64,7 +66,9 @@ export default function RekapScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
+      <ScreenHeader title="Rekap Absensi" subtitle="Harian · Bulanan · Export Excel" />
+
       <View style={styles.tabs}>
         {(['daily', 'monthly'] as const).map((value) => (
           <Pressable key={value} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabActive]}>
@@ -87,22 +91,24 @@ export default function RekapScreen() {
         daily.classes.length === 0 ? (
           <EmptyState title="Belum ada murid" message="Tambahkan murid dan assign kelas terlebih dahulu." />
         ) : (
-          daily.classes.map((cls) => (
-            <Card key={String(cls.classId)} style={styles.card}>
-              <Text style={styles.classTitle}>{cls.className}</Text>
-              {cls.students.map((student) => {
-                const badge = statusTone(student.status);
-                return (
-                  <View key={student.id} style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>{student.fullName}</Text>
-                      <Text style={styles.meta}>NIS {student.nis}</Text>
+          daily.classes.map((cls, index) => (
+            <Animated.View key={String(cls.classId)} entering={FadeInDown.delay(index * 60)}>
+              <Card style={styles.card}>
+                <Text style={styles.classTitle}>{cls.className}</Text>
+                {cls.students.map((student) => {
+                  const badge = statusTone(student.status);
+                  return (
+                    <View key={student.id} style={styles.row}>
+                      <View>
+                        <Text style={styles.name}>{student.fullName}</Text>
+                        <Text style={styles.meta}>NIS {student.nis}</Text>
+                      </View>
+                      <Badge label={badge.label} tone={badge.tone} />
                     </View>
-                    <Badge label={badge.label} tone={badge.tone} />
-                  </View>
-                );
-              })}
-            </Card>
+                  );
+                })}
+              </Card>
+            </Animated.View>
           ))
         )
       ) : null}

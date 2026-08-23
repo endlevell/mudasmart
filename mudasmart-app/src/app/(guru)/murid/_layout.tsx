@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 export default function GuruMuridLayout() {
   return (
     <Stack screenOptions={{ headerTintColor: '#0B6E4F', headerTitleStyle: { fontWeight: '600' } }}>
-      <Stack.Screen name="index" options={{ title: 'Kelola Murid' }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="[id]" options={{ title: 'Detail Murid' }} />
     </Stack>
   );

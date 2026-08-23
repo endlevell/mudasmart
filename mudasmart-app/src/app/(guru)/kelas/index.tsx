@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { Input } from '../../../components/ui/input';
+import { ScreenHeader } from '../../../components/ui/screen-header';
 import { colors, spacing, type } from '../../../constants/theme';
 import { classesApi, type ClassRoom } from '../../../api/classes.api';
 import { useAuthStore } from '../../../store/auth-store';
@@ -62,11 +64,14 @@ export default function KelolaKelasScreen() {
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title="Kelola Kelas" subtitle="Daftar kelas & wali kelas" />
       <FlatList
+        contentContainerStyle={{ paddingBottom: 140, paddingTop: spacing.md }}
         data={items}
         keyExtractor={(item) => String(item.id)}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(index * 50)}>
           <Card>
             <Pressable disabled={!isAdmin} onPress={() => startEdit(item)} style={styles.row}>
               <View>
@@ -76,6 +81,7 @@ export default function KelolaKelasScreen() {
               <Badge label={`${item.studentCount} murid`} tone="success" />
             </Pressable>
           </Card>
+          </Animated.View>
         )}
         ListEmptyComponent={<EmptyState title="Belum ada kelas" message={isAdmin ? 'Tambahkan kelas pertama lewat formulir di bawah.' : 'Minta guru admin membuat kelas.'} />}
       />

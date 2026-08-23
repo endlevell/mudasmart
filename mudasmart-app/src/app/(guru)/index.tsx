@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { LiquidButton } from '../../components/ui/liquid-button';
 import { colors, radius, spacing, type } from '../../constants/theme';
 import { sessionsApi, type AttendanceSession } from '../../api/sessions.api';
 import { useAuthStore } from '../../store/auth-store';
@@ -67,11 +67,10 @@ export default function GuruDashboard() {
             <Text style={[styles.sessionState, session?.status !== 'open' && styles.sessionClosed]}>
               {session?.status === 'open' ? 'Sedang Dibuka' : session ? 'Ditutup' : 'Belum dibuka'}
             </Text>
-            <Button
+            <LiquidButton
               label={session?.status === 'open' ? 'Tutup Sesi' : 'Buka Sesi'}
               onPress={() => void toggle()}
               pending={pending}
-              variant={session?.status === 'open' ? 'danger-outline' : 'gradient'}
             />
           </>
         )}
@@ -84,7 +83,7 @@ export default function GuruDashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, flex: 1 },
+  container: { backgroundColor: colors.backgroundAlt, flex: 1, paddingBottom: 140 },
   hero: {
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,

@@ -37,7 +37,7 @@ export function Button({ label, onPress, pending = false, disabled = false, vari
       }}
       onPressOut={() => (scale.value = withTiming(1, { duration: 150 }))}
     >
-      <Animated.View style={[styles.base, (disabled || pending) && styles.disabled, animated]}>
+      <Animated.View style={[styles.base, styles.baseFallback, (disabled || pending) && styles.disabled, animated]}>
         {variant === 'gradient' ? (
           <LinearGradient
             colors={gradients.fresh}
@@ -65,6 +65,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   primary: { backgroundColor: colors.primary700 },
+  baseFallback: { backgroundColor: colors.primary700 },
   dangerOutline: { backgroundColor: colors.background, borderWidth: 1.5, borderColor: colors.danger },
   ghost: { backgroundColor: colors.primary100 },
   disabled: { opacity: 0.45 },

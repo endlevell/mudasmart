@@ -78,7 +78,7 @@ export default function MuridDashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, flex: 1 },
+  container: { backgroundColor: colors.backgroundAlt, flex: 1, paddingBottom: 140 },
   hero: {
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,

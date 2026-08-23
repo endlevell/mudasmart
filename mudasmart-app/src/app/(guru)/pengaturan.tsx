@@ -4,6 +4,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { ScreenHeader } from '../../components/ui/screen-header';
 import { Select } from '../../components/ui/select';
 import { colors, spacing, type } from '../../constants/theme';
 import { codesApi, type RegistrationCode } from '../../api/codes.api';
@@ -102,7 +103,8 @@ export default function PengaturanScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
+      <ScreenHeader title="Pengaturan" subtitle="Jam absen & kode registrasi" />
       <Card>
         <Text style={styles.sectionTitle}>Jam Absen</Text>
         <Input label="Mulai Absen" onChangeText={(v) => setConfig((p) => ({ ...p, checkInStart: v }))} placeholder="06:00" value={config.checkInStart} />

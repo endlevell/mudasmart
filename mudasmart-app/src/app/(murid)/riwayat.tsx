@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Badge } from '../../components/ui/badge';
 import { EmptyState } from '../../components/ui/empty-state';
+import { ScreenHeader } from '../../components/ui/screen-header';
 import { Select } from '../../components/ui/select';
 import { colors, radius, spacing, type } from '../../constants/theme';
 import { attendanceApi, type HistoryItem } from '../../api/attendance.api';
@@ -52,14 +54,17 @@ export default function RiwayatScreen() {
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title="Riwayat Absensi" subtitle="Rekap kehadiran per bulan" />
       <Select label="Bulan" onSelect={(value) => setMonth(value)} options={lastMonths(12)} value={month} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FlatList
+        contentContainerStyle={{ paddingBottom: 140 }}
         data={rows}
         keyExtractor={(item) => item.key}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        renderItem={({ item }) =>
+        renderItem={({ item, index }) =>
           item.kind === 'record' ? (
+            <Animated.View entering={FadeInDown.delay(index * 40)}>
             <View style={styles.row}>
               <View style={styles.dateCol}>
                 <Text style={styles.day}>{dayLabel(item.item.scannedAt).split(',')[0]}</Text>
@@ -71,7 +76,9 @@ export default function RiwayatScreen() {
               </View>
               <Badge label={item.item.status === 'hadir' ? 'Hadir' : 'Telat'} tone={item.item.status === 'hadir' ? 'success' : 'warning'} />
             </View>
+            </Animated.View>
           ) : (
+            <Animated.View entering={FadeInDown.delay(index * 40)}>
             <View style={[styles.row, styles.absentRow]}>
               <View style={styles.dateCol}>
                 <Text style={[styles.day, styles.muted]}>{dayLabel(new Date(`${item.date}T00:00:00+07:00`).getTime()).split(',')[0]}</Text>
@@ -82,6 +89,7 @@ export default function RiwayatScreen() {
               </View>
               <Badge label="Tidak Hadir" tone="danger" />
             </View>
+            </Animated.View>
           )
         }
         ListEmptyComponent={!error ? <EmptyState title="Belum ada data" message="Riwayat absensi bulan ini masih kosong." /> : null}

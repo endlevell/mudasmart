@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { ScreenHeader } from '../../components/ui/screen-header';
 import { colors, radius, spacing, type } from '../../constants/theme';
 import { gatesApi, type Gate } from '../../api/gates.api';
 
@@ -72,7 +73,8 @@ export default function KelolaGerbangScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
+      <ScreenHeader title="Kelola Gerbang" subtitle="QR absensi & geofence" />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {gates.map((gate) => (
         <Card key={gate.id} style={styles.card}>

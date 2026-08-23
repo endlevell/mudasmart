@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Card } from '../../../components/ui/card';
 import { EmptyState } from '../../../components/ui/empty-state';
+import { ScreenHeader } from '../../../components/ui/screen-header';
 import { Select } from '../../../components/ui/select';
 import { colors, radius, spacing, type } from '../../../constants/theme';
 import { classesApi, type ClassRoom } from '../../../api/classes.api';
@@ -38,11 +40,12 @@ export default function KelolaMuridScreen() {
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title="Kelola Murid" subtitle="Cari, filter, dan kelola data murid" />
       <TextInput
         onChangeText={(value) => setSearch(value)}
         placeholder="Cari nama atau NIS"
         placeholderTextColor={colors.textSecondary}
-        style={styles.search}
+        style={[styles.search, { marginTop: spacing.md }]}
         value={search}
       />
       <Select
@@ -54,10 +57,12 @@ export default function KelolaMuridScreen() {
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FlatList
+        contentContainerStyle={{ paddingBottom: 140 }}
         data={students}
         keyExtractor={(item) => item.id}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(index * 40)}>
           <Card>
             <Pressable onPress={() => router.push({ pathname: '/(guru)/murid/[id]', params: { id: item.id } })} style={styles.row}>
               <View>
@@ -67,6 +72,7 @@ export default function KelolaMuridScreen() {
               <Text style={styles.chevron}>›</Text>
             </Pressable>
           </Card>
+          </Animated.View>
         )}
         ListEmptyComponent={!error ? <EmptyState title="Tidak ada murid" message="Coba ubah kata kunci atau filter kelas." /> : null}
       />

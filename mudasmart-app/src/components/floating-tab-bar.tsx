@@ -8,6 +8,8 @@ import { colors, gradients, radius, shadow, spacing, type } from '../constants/t
 
 export interface TabItem {
   key: string;
+  /** Nama route di Tabs (state.routes[x].name) — sumber kebenaran status aktif. */
+  routeName: string;
   label: string;
   icon: Extract<keyof typeof Ionicons.glyphMap, string>;
   href: string;
@@ -16,36 +18,36 @@ export interface TabItem {
 
 interface FloatingTabBarProps {
   tabs: TabItem[];
-  activeKey: string;
+  activeRouteName: string;
   onSelect: (href: string) => void;
 }
 
-// Floating navbar — pill gelap mengambang, indikator aktif animasi spring,
-// item tengah (opsional) berupa tombol gradien terangkat (untuk Scan).
-export function FloatingTabBar({ tabs, activeKey, onSelect }: FloatingTabBarProps) {
+// Floating navbar — pill gelap mengambang; ikon aktif memantul (spring) saat berganti.
+export function FloatingTabBar({ tabs, activeRouteName, onSelect }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
   const glow = useSharedValue(0);
+  const centerGlow = useCenterGlow(glow);
 
   const center = tabs.find((tab) => tab.isCenter);
   const sides = tabs.filter((tab) => !tab.isCenter);
-  const centerGlow = useCenterGlow(glow);
 
   const renderItem = (tab: TabItem) => {
-    const active = activeKey === tab.key;
+    const active = activeRouteName === tab.routeName;
     return (
       <Pressable
         key={tab.key}
         accessibilityRole="tab"
+        accessibilityState={{ selected: active }}
         onPress={() => {
           Haptics.selectionAsync().catch(() => {});
           onSelect(tab.href);
         }}
         style={styles.item}
       >
-        <Animated.View style={[styles.itemInner, active && styles.itemActive]}>
-          <Ionicons name={active ? (tab.icon.replace('-outline', '') as keyof typeof Ionicons.glyphMap) : tab.icon} size={20} color={active ? colors.primary300 : 'rgba(255,255,255,0.65)'} />
+        <View style={[styles.itemInner, active && styles.itemActiveBg]}>
+          <TabIcon name={tab.icon} active={active} />
           <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>{tab.label}</Text>
-        </Animated.View>
+        </View>
       </Pressable>
     );
   };
@@ -57,12 +59,12 @@ export function FloatingTabBar({ tabs, activeKey, onSelect }: FloatingTabBarProp
         {center ? (
           <Pressable
             accessibilityRole="button"
-            onPressIn={() => (glow.value = withSpring(1))}
-            onPressOut={() => (glow.value = withSpring(0))}
-            onPress={() => {
+            onPressIn={() => {
+              glow.value = withSpring(1);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-              onSelect(center.href);
             }}
+            onPressOut={() => (glow.value = withSpring(0))}
+            onPress={() => onSelect(center.href)}
             style={styles.centerWrap}
           >
             <Animated.View style={[styles.centerButton, centerGlow]} pointerEvents="none">
@@ -76,6 +78,26 @@ export function FloatingTabBar({ tabs, activeKey, onSelect }: FloatingTabBarProp
         {sides.slice(Math.ceil(sides.length / 2)).map(renderItem)}
       </View>
     </View>
+  );
+}
+
+// Ikon aktif memantul sekali (spring scale) — feedback gerak tanpa biaya besar.
+function TabIcon({ name, active }: { name: string; active: boolean }) {
+  const scale = useSharedValue(1);
+  const previous = useSharedValue(active);
+  if (previous.value !== active) {
+    previous.value = active;
+    if (active) {
+      scale.value = 0.6;
+      scale.value = withSpring(1.15, { damping: 6 });
+    }
+  }
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const filled = (active ? name.replace(/-outline$/, '') : name) as Extract<keyof typeof Ionicons.glyphMap, string>;
+  return (
+    <Animated.View style={style}>
+      <Ionicons name={filled} size={20} color={active ? colors.primary300 : 'rgba(255,255,255,0.65)'} />
+    </Animated.View>
   );
 }
 
@@ -103,7 +125,7 @@ const styles = StyleSheet.create({
   },
   item: { flex: 1 },
   itemInner: { alignItems: 'center', borderRadius: radius.full, gap: 2, paddingHorizontal: spacing.xs, paddingVertical: 6 },
-  itemActive: { backgroundColor: 'rgba(22,163,116,0.22)' },
+  itemActiveBg: { backgroundColor: 'rgba(22,163,116,0.22)' },
   itemLabel: { ...type.caption, color: 'rgba(255,255,255,0.65)', fontSize: 10 },
   itemLabelActive: { color: colors.primary300, fontWeight: '700' },
   centerWrap: { alignItems: 'center', marginTop: -34, flex: 1 },
