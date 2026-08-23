@@ -5,7 +5,22 @@ const KEYS = {
   refreshToken: 'mudas.refreshToken',
   user: 'mudas.user',
   deviceId: 'mudas.deviceId',
+  onboardingSeen: 'mudas.onboardingSeen',
 } as const;
+
+// Cache in-memory agar gate di root layout tidak menunggu I/O berulang.
+let cachedOnboardingSeen: boolean | null = null;
+
+export const isOnboardingSeen = async (): Promise<boolean> => {
+  if (cachedOnboardingSeen !== null) return cachedOnboardingSeen;
+  cachedOnboardingSeen = (await SecureStore.getItemAsync(KEYS.onboardingSeen)) === '1';
+  return cachedOnboardingSeen;
+};
+
+export const markOnboardingSeen = async () => {
+  cachedOnboardingSeen = true;
+  await SecureStore.setItemAsync(KEYS.onboardingSeen, '1');
+};
 
 // Token hanya boleh lewat sini (Keychain/Keystore) — jangan AsyncStorage.
 export const saveSession = async (session: { accessToken: string; refreshToken: string; user: unknown }) => {
