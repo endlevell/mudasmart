@@ -8,9 +8,11 @@
     "scheme": "mudasmartapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "id.sch.mudasmart.app"
     },
     "android": {
+      "package": "id.sch.mudasmart.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -26,6 +28,16 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "proguardFile": "./proguard-rules.pro"
+          }
+        }
+      ],
       [
         "expo-splash-screen",
         {

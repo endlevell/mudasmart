@@ -30,6 +30,15 @@ if (!activeCode) {
   console.log(`[seed] Kode registrasi aktif sudah ada: ${activeCode.code} (lewati)`);
 }
 
+// Kode murid multi-pakai untuk distribusi ke siswa.
+const muridCode = db.select().from(registrationCodes).where(eq(registrationCodes.code, 'MURID2026')).get();
+if (!muridCode) {
+  db.insert(registrationCodes).values({ code: 'MURID2026', roleAllowed: 'murid', isActive: true, maxUses: null, usedCount: 0, createdAt: now, updatedAt: now }).run();
+  console.log('[seed] Kode registrasi murid: MURID2026 (multi-pakai)');
+} else {
+  console.log('[seed] Kode murid MURID2026 sudah ada (lewati)');
+}
+
 const gateCount = db.select({ total: count() }).from(gates).get();
 if (!gateCount || gateCount.total === 0) {
   const qr = `gate-${randomBytes(12).toString('base64url')}`;

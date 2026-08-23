@@ -1,0 +1,20 @@
+[Unit]
+Description=MUDASmart API (Hono + Bun)
+After=network.target
+
+[Service]
+Type=simple
+# Sesuaikan User/WorkingDirectory dengan VPS Anda.
+User=www-data
+WorkingDirectory=/opt/mudasmart/mudasmart-api
+ExecStart=/usr/local/bin/bun src/index.ts
+EnvironmentFile=/opt/mudasmart/mudasmart-api/.env
+Restart=always
+RestartSec=3
+# Hardening ringan
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/opt/mudasmart/mudasmart-api/data
+
+[Install]
+WantedBy=multi-user.target
