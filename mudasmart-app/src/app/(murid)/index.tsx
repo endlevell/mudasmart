@@ -88,7 +88,15 @@ export default function MuridDashboard() {
       });
       setStats({ hadir, telat, alfa, sessions: current.sessionDates.length });
 
-      const days = Array.from({ length: 7 }, (_, index) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - index)));
+      const days: Date[] = [];
+      const cursor = new Date(now);
+      // Hari sekolah saja (Senin–Jumat), 5 hari terakhir termasuk hari ini.
+      while (days.length < 5) {
+        const dayOfWeek = cursor.getDay();
+        if (dayOfWeek >= 1 && dayOfWeek <= 5) days.push(new Date(cursor));
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      days.reverse();
       setWeek(
         days.map((day) => {
           const key = dateKey(day);
@@ -197,7 +205,7 @@ export default function MuridDashboard() {
         {week.length > 0 ? (
           <Animated.View entering={FadeInDown.delay(140)}>
             <Card>
-              <Text style={styles.cardTitle}>7 Hari Terakhir</Text>
+              <Text style={styles.cardTitle}>5 Hari Sekolah Terakhir</Text>
               <View style={styles.weekRow}>
                 {week.map((day) => (
                   <View key={day.key} style={styles.dayCol}>
