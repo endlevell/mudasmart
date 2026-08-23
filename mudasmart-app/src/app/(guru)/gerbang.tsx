@@ -75,6 +75,7 @@ export default function KelolaGerbangScreen() {
   return (
     <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Kelola Gerbang" subtitle="QR absensi & geofence" />
+      <View style={styles.content}>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {gates.map((gate) => (
         <Card key={gate.id} style={styles.card}>
@@ -104,12 +105,14 @@ export default function KelolaGerbangScreen() {
         <Input keyboardType="number-pad" label="Radius Geofence meter (opsional)" onChangeText={(radiusMeters) => setForm((prev) => ({ ...prev, radiusMeters }))} placeholder="50" value={form.radiusMeters} />
         <Button label="Tambah Gerbang" onPress={() => void submit()} pending={pending} />
       </Card>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, gap: spacing.md, padding: spacing.md },
+  container: { backgroundColor: colors.backgroundAlt },
+  content: { gap: spacing.md, padding: spacing.md },
   card: { gap: spacing.sm },
   qrBox: { alignItems: 'center', alignSelf: 'center', backgroundColor: '#FFFFFF', borderRadius: radius.lg, padding: spacing.sm, ...{ shadowColor: '#0B3D2C', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 } },
   titleRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },

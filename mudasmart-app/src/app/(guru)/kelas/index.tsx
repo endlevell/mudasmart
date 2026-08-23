@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
@@ -63,15 +63,11 @@ export default function KelolaKelasScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Kelola Kelas" subtitle="Daftar kelas & wali kelas" />
-      <FlatList
-        contentContainerStyle={{ paddingBottom: 140, paddingTop: spacing.md }}
-        data={items}
-        keyExtractor={(item) => String(item.id)}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(index * 50)}>
+      <View style={styles.content}>
+      {items.map((item, index) => (
+        <Animated.View key={String(item.id)} entering={FadeInDown.delay(index * 50)}>
           <Card>
             <Pressable disabled={!isAdmin} onPress={() => startEdit(item)} style={styles.row}>
               <View>
@@ -81,10 +77,11 @@ export default function KelolaKelasScreen() {
               <Badge label={`${item.studentCount} murid`} tone="success" />
             </Pressable>
           </Card>
-          </Animated.View>
-        )}
-        ListEmptyComponent={<EmptyState title="Belum ada kelas" message={isAdmin ? 'Tambahkan kelas pertama lewat formulir di bawah.' : 'Minta guru admin membuat kelas.'} />}
-      />
+        </Animated.View>
+      ))}
+      {items.length === 0 ? (
+        <EmptyState title="Belum ada kelas" message={isAdmin ? 'Tambahkan kelas pertama lewat formulir di bawah.' : 'Minta guru admin membuat kelas.'} />
+      ) : null}
 
       {isAdmin ? (
         <Card style={styles.formCard}>
@@ -103,13 +100,14 @@ export default function KelolaKelasScreen() {
       ) : error ? (
         <Text style={styles.error}>{error}</Text>
       ) : null}
-    </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, flex: 1, padding: spacing.md },
-  separator: { height: spacing.sm },
+  container: { backgroundColor: colors.backgroundAlt },
+  content: { padding: spacing.md, gap: spacing.sm },
   row: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   meta: { ...type.caption, color: colors.textSecondary },

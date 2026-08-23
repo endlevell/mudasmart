@@ -105,6 +105,7 @@ export default function PengaturanScreen() {
   return (
     <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Pengaturan" subtitle="Jam absen & kode registrasi" />
+      <View style={styles.content}>
       <Card>
         <Text style={styles.sectionTitle}>Jam Absen</Text>
         <Input label="Mulai Absen" onChangeText={(v) => setConfig((p) => ({ ...p, checkInStart: v }))} placeholder="06:00" value={config.checkInStart} />
@@ -150,12 +151,14 @@ export default function PengaturanScreen() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, gap: spacing.md, padding: spacing.md },
+  container: { backgroundColor: colors.backgroundAlt },
+  content: { gap: spacing.md, padding: spacing.md },
   sectionTitle: { ...type.label, color: colors.textSecondary, marginBottom: spacing.xs, textTransform: 'uppercase' },
   codeRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm },
   codeInfo: { flex: 1 },

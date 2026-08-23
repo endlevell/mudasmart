@@ -129,6 +129,6 @@ const styles = StyleSheet.create({
   sheetTitle: { ...type.heading, color: colors.textPrimary, marginBottom: spacing.lg },
   errorBox: { backgroundColor: colors.dangerBg, borderRadius: radius.md, marginBottom: spacing.md, padding: spacing.md },
   errorText: { color: colors.danger, fontSize: type.caption.fontSize + 1, fontWeight: '600' },
-  link: { alignSelf: 'center', color: colors.textSecondary, marginTop: spacing.lg },
+  link: { alignSelf: 'stretch', color: colors.textSecondary, marginTop: spacing.lg, textAlign: 'center' },
   linkStrong: { color: colors.primary700, fontWeight: '700' },
 });

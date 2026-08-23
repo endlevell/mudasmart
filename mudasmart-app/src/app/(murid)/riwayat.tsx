@@ -55,6 +55,7 @@ export default function RiwayatScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Riwayat Absensi" subtitle="Rekap kehadiran per bulan" />
+      <View style={styles.content}>
       <Select label="Bulan" onSelect={(value) => setMonth(value)} options={lastMonths(12)} value={month} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FlatList
@@ -94,12 +95,14 @@ export default function RiwayatScreen() {
         }
         ListEmptyComponent={!error ? <EmptyState title="Belum ada data" message="Riwayat absensi bulan ini masih kosong." /> : null}
       />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, flex: 1, padding: spacing.md },
+  container: { backgroundColor: colors.backgroundAlt, flex: 1 },
+  content: { flex: 1, padding: spacing.md },
   error: { color: colors.danger, fontSize: type.caption.fontSize, marginBottom: spacing.sm },
   separator: { height: spacing.sm },
   row: {

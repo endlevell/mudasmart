@@ -41,6 +41,7 @@ export default function KelolaMuridScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Kelola Murid" subtitle="Cari, filter, dan kelola data murid" />
+      <View style={styles.content}>
       <TextInput
         onChangeText={(value) => setSearch(value)}
         placeholder="Cari nama atau NIS"
@@ -76,12 +77,14 @@ export default function KelolaMuridScreen() {
         )}
         ListEmptyComponent={!error ? <EmptyState title="Tidak ada murid" message="Coba ubah kata kunci atau filter kelas." /> : null}
       />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, flex: 1, padding: spacing.md },
+  container: { backgroundColor: colors.backgroundAlt, flex: 1 },
+  content: { flex: 1, padding: spacing.md },
   search: {
     backgroundColor: colors.background,
     borderColor: colors.border,

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect } from 'react';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, type SharedValue } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,8 +9,6 @@ import { colors, gradients, radius, shadow, spacing, type } from '../constants/t
 
 export interface TabItem {
   key: string;
-  /** Nama route di Tabs (state.routes[x].name) — sumber kebenaran status aktif. */
-  routeName: string;
   label: string;
   icon: Extract<keyof typeof Ionicons.glyphMap, string>;
   href: string;
@@ -18,12 +17,13 @@ export interface TabItem {
 
 interface FloatingTabBarProps {
   tabs: TabItem[];
-  activeRouteName: string;
+  /** key dari tab aktif — dihitung layout induk dari pathname (deterministik). */
+  activeKey: string;
   onSelect: (href: string) => void;
 }
 
 // Floating navbar — pill gelap mengambang; ikon aktif memantul (spring) saat berganti.
-export function FloatingTabBar({ tabs, activeRouteName, onSelect }: FloatingTabBarProps) {
+export function FloatingTabBar({ tabs, activeKey, onSelect }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
   const glow = useSharedValue(0);
   const centerGlow = useCenterGlow(glow);
@@ -32,7 +32,7 @@ export function FloatingTabBar({ tabs, activeRouteName, onSelect }: FloatingTabB
   const sides = tabs.filter((tab) => !tab.isCenter);
 
   const renderItem = (tab: TabItem) => {
-    const active = activeRouteName === tab.routeName;
+    const active = activeKey === tab.key;
     return (
       <Pressable
         key={tab.key}
@@ -81,17 +81,16 @@ export function FloatingTabBar({ tabs, activeRouteName, onSelect }: FloatingTabB
   );
 }
 
-// Ikon aktif memantul sekali (spring scale) — feedback gerak tanpa biaya besar.
+// Ikon aktif memantul sekali (spring scale) — efek digerakkan dari useEffect, bukan saat render.
 function TabIcon({ name, active }: { name: string; active: boolean }) {
   const scale = useSharedValue(1);
-  const previous = useSharedValue(active);
-  if (previous.value !== active) {
-    previous.value = active;
+
+  useEffect(() => {
     if (active) {
-      scale.value = 0.6;
       scale.value = withSpring(1.15, { damping: 6 });
     }
-  }
+  }, [active, scale]);
+
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const filled = (active ? name.replace(/-outline$/, '') : name) as Extract<keyof typeof Ionicons.glyphMap, string>;
   return (
@@ -124,8 +123,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(111,203,163,0.18)',
   },
   item: { flex: 1 },
-  itemInner: { alignItems: 'center', borderRadius: radius.full, gap: 2, paddingHorizontal: spacing.xs, paddingVertical: 6 },
-  itemActiveBg: { backgroundColor: 'rgba(22,163,116,0.22)' },
+  itemInner: { alignItems: 'center', borderRadius: 999, gap: 2, paddingHorizontal: spacing.xs, paddingVertical: 6 },
+  itemActiveBg: { backgroundColor: 'rgba(22,163,116,0.22)', borderRadius: 999 },
   itemLabel: { ...type.caption, color: 'rgba(255,255,255,0.65)', fontSize: 10 },
   itemLabelActive: { color: colors.primary300, fontWeight: '700' },
   centerWrap: { alignItems: 'center', marginTop: -34, flex: 1 },

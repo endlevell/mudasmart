@@ -68,7 +68,7 @@ export default function RekapScreen() {
   return (
     <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]}>
       <ScreenHeader title="Rekap Absensi" subtitle="Harian · Bulanan · Export Excel" />
-
+      <View style={styles.content}>
       <View style={styles.tabs}>
         {(['daily', 'monthly'] as const).map((value) => (
           <Pressable key={value} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabActive]}>
@@ -133,12 +133,14 @@ export default function RekapScreen() {
       ) : null}
 
       <Button label="Export ke Excel" onPress={() => void exportReport()} pending={pending} />
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.backgroundAlt, gap: spacing.md, padding: spacing.md },
+  container: { backgroundColor: colors.backgroundAlt },
+  content: { gap: spacing.md, padding: spacing.md },
   tabs: { backgroundColor: colors.surfaceMuted, borderRadius: radius.full, flexDirection: 'row', padding: 4 },
   tab: { alignItems: 'center', borderRadius: radius.full, flex: 1, paddingVertical: spacing.sm },
   tabActive: { backgroundColor: colors.primary700 },
