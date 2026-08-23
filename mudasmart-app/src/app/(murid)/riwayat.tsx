@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as ImagePicker from 'expo-image-picker';
 import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { EmptyState } from '../../components/ui/empty-state';
-import { Input } from '../../components/ui/input';
-import { PressableScale } from '../../components/ui/pressable-scale';
 import { ScreenHeader } from '../../components/ui/screen-header';
 import { Select } from '../../components/ui/select';
-import { toast } from '../../components/ui/toast';
 import { colors, radius, spacing, type } from '../../constants/theme';
 import { attendanceApi, type HistoryItem } from '../../api/attendance.api';
 import { leavesApi, type LeaveRequest, type LeaveStatus } from '../../api/leaves.api';
@@ -26,15 +20,6 @@ const lastMonths = (count: number) => {
     const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
     const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     return { label: monthLabel(value), value };
-  });
-};
-// Pengajuan umumnya untuk hari ini/beberapa hari terakhir.
-const recentDateOptions = () => {
-  const now = new Date();
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - index);
-    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    return { label: new Intl.DateTimeFormat('id-ID', { timeZone: jakarta, weekday: 'long', day: 'numeric', month: 'long' }).format(date), value };
   });
 };
 
@@ -62,14 +47,6 @@ export default function RiwayatScreen() {
   const [byDate, setByDate] = useState<Map<string, DayStatus>>(new Map());
   const [myLeaves, setMyLeaves] = useState<LeaveRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  // Form pengajuan
-  const [formOpen, setFormOpen] = useState(false);
-  const [leaveDate, setLeaveDate] = useState(recentDateOptions()[0].value);
-  const [leaveType, setLeaveType] = useState<'sakit' | 'izin'>('sakit');
-  const [reason, setReason] = useState('');
-  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -108,37 +85,6 @@ export default function RiwayatScreen() {
     void loadLeaves();
   }, [load, loadLeaves]);
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, allowsMultipleSelection: false });
-    if (!result.canceled && result.assets[0]) setImage(result.assets[0]);
-  };
-
-  const submitLeave = async () => {
-    if (reason.trim().length < 3) {
-      toast.show({ tone: 'warning', title: 'Alasan terlalu pendek', message: 'Tuliskan alasan minimal 3 karakter.' });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const form = new FormData();
-      form.set('date', leaveDate);
-      form.set('type', leaveType);
-      form.set('reason', reason.trim());
-      if (image?.uri) form.append('image', { uri: image.uri, name: image.fileName ?? 'lampiran.jpg', type: image.mimeType ?? 'image/jpeg' } as unknown as Blob);
-      await leavesApi.create(form);
-      toast.show({ tone: 'success', title: 'Pengajuan terkirim', message: 'Menunggu persetujuan guru.' });
-      setFormOpen(false);
-      setReason('');
-      setImage(null);
-      void load();
-      void loadLeaves();
-    } catch (e) {
-      toast.show({ tone: 'danger', title: 'Gagal mengirim', message: e instanceof Error ? e.message : 'Terjadi kesalahan' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   // Statistik bulan terpilih.
   let hadir = 0;
   let telat = 0;
@@ -168,15 +114,7 @@ export default function RiwayatScreen() {
 
   const listHeader = (
     <View>
-      <View style={styles.topRow}>
-        <View style={{ flex: 1 }}>
-          <Select label="Bulan" onSelect={(value) => setMonth(value)} options={lastMonths(12)} value={month} />
-        </View>
-        <PressableScale onPress={() => setFormOpen(true)} style={styles.addButton}>
-          <Ionicons name="add-circle" size={22} color={colors.primary700} />
-          <Text style={styles.addText}>Ajukan Izin</Text>
-        </PressableScale>
-      </View>
+      <Select label="Bulan" onSelect={(value) => setMonth(value)} options={lastMonths(12)} value={month} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Animated.View entering={FadeInDown.delay(40)}>
@@ -293,37 +231,6 @@ export default function RiwayatScreen() {
           ListEmptyComponent={!error ? <EmptyState title="Belum ada data" message="Riwayat absensi bulan ini masih kosong." /> : null}
         />
       </View>
-
-      {/* Form pengajuan izin/sakit */}
-      <Modal animationType="slide" onRequestClose={() => setFormOpen(false)} visible={formOpen}>
-        <ScrollView style={styles.formContainer} contentContainerStyle={styles.formContent}>
-          <View style={styles.formHead}>
-            <Text style={styles.formTitle}>Ajukan Izin / Sakit</Text>
-            <Pressable onPress={() => setFormOpen(false)} hitSlop={8}>
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-          <Select label="Tanggal" onSelect={(value) => setLeaveDate(value)} options={recentDateOptions()} value={leaveDate} />
-          <Select
-            label="Jenis"
-            onSelect={(value) => setLeaveType(value as 'sakit' | 'izin')}
-            options={[
-              { label: 'Sakit (dengan surat)', value: 'sakit' },
-              { label: 'Izin', value: 'izin' },
-            ]}
-            value={leaveType}
-          />
-          <Input label="Alasan" onChangeText={setReason} placeholder="Contoh: demam tinggi, ada acara keluarga" value={reason} />
-          <PressableScale onPress={() => void pickImage()} style={styles.attachButton}>
-            <Ionicons name="image-outline" size={18} color={colors.primary700} />
-            <Text numberOfLines={1} style={styles.attachText}>
-              {image ? (image.fileName ?? 'Lampiran dipilih') : 'Lampirkan foto surat (opsional)'}
-            </Text>
-          </PressableScale>
-          <Button label={submitting ? 'Mengirim...' : 'Kirim Pengajuan'} onPress={() => void submitLeave()} pending={submitting} />
-          <Text style={styles.formNote}>Pengajuan akan ditinjau oleh guru sebelum status izin berlaku.</Text>
-        </ScrollView>
-      </Modal>
     </View>
   );
 }
@@ -340,18 +247,6 @@ function Legend({ color, label }: { color: string; label: string }) {
 const styles = StyleSheet.create({
   container: { backgroundColor: colors.backgroundAlt, flex: 1 },
   content: { flex: 1, padding: spacing.md },
-  topRow: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.sm },
-  addButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primary100,
-    borderRadius: radius.md,
-    flexDirection: 'row',
-    gap: 5,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.sm,
-  },
-  addText: { fontSize: type.caption.fontSize, fontWeight: '700', color: colors.primary700 },
   error: { color: colors.danger, fontSize: type.caption.fontSize, marginBottom: spacing.sm },
   separator: { height: spacing.sm },
   summaryHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
@@ -399,22 +294,4 @@ const styles = StyleSheet.create({
   mid: { flex: 1 },
   time: { ...type.bodyStrong, color: colors.textPrimary },
   meta: { ...type.caption, color: colors.textSecondary },
-  formContainer: { backgroundColor: colors.backgroundAlt, flex: 1 },
-  formContent: { paddingBottom: spacing.xxl, padding: spacing.lg },
-  formHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.md, marginTop: spacing.lg },
-  formTitle: { ...type.title, color: colors.textPrimary },
-  attachButton: {
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-  },
-  attachText: { ...type.body, color: colors.textSecondary, flex: 1 },
-  formNote: { ...type.caption, color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' },
 });

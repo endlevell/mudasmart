@@ -9,6 +9,7 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { ChangePasswordModal } from '../../components/ui/change-password-modal';
 import { PressableScale } from '../../components/ui/pressable-scale';
+import { LeaveRequestModal } from '../../components/leave-request-modal';
 import { colors, radius, spacing, type } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth-store';
 
@@ -25,6 +26,7 @@ const initialsOf = (fullName: string) =>
 export default function MuridProfilScreen() {
   const insets = useSafeAreaInsets();
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const { session: auth, logout } = useAuthStore();
   const user = auth?.user;
 
@@ -61,6 +63,12 @@ export default function MuridProfilScreen() {
             <Text style={styles.cardTitle}>Menu</Text>
             <View style={{ marginTop: spacing.xs }}>
               <MenuItem
+                icon="document-text-outline"
+                label="Ajukan Izin / Sakit"
+                sub="Kirim permohonan untuk guru setujui"
+                onPress={() => setLeaveOpen(true)}
+              />
+              <MenuItem
                 icon="calendar-outline"
                 label="Riwayat Absensi"
                 sub="Rekap kehadiran per bulan"
@@ -83,6 +91,7 @@ export default function MuridProfilScreen() {
         <Text style={styles.version}>MUDASmart · Aplikasi Absensi QR</Text>
       </View>
 
+      <LeaveRequestModal onClose={() => setLeaveOpen(false)} visible={leaveOpen} />
       <ChangePasswordModal onClose={() => setPasswordOpen(false)} visible={passwordOpen} />
     </ScrollView>
   );
